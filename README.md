@@ -3,7 +3,7 @@
 An interactive web piece. A human wakes from the dream of being human and slips beneath as a dolphin, seeing the dark sea with sound.
 
 - **Webcam version (main):** https://gappybara.github.io/SlipBeneath/ — mouth: echo · fist: take a sound · open palm: listen · eyes closed: sleep
-- **Mouse / trackball version:** https://gappybara.github.io/SlipBeneath/mouse.html
+- **Mouse version:** https://gappybara.github.io/SlipBeneath/mouse.html
 
 Best in desktop Chrome, full screen, with headphones.
 
