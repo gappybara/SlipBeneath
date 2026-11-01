@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SLIP BENEATH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syncopate&family=Lexend+Zetta:wght@200&family=Tenor+Sans&family=Marcellus&family=Italiana&family=Josefin+Sans:wght@200;300;400&family=Poiret+One&family=Gruppo&family=IBM+Plex+Mono:wght@300;400&family=Gothic+A1:wght@200;300&display=swap">
+<style>
+/* Layout: one full-screen stage (tuned for the 27" iMac, 16:9). The hole opens it, the reef is swum through, THE DEEP ends it. Text stays small and at the edges. */
+/* palette (shared with the shaders, written there as 0–1 rgb):
+   void #05060c · abyss #141838 · periwinkle #6f7fd0 · haze #c9c8e8 · moonlight #eef0fa · teal #8fe3d8 (sound only) · pearl #e8d6b0 (rare warmth) */
+:root{
+  --void:#05060c;
+  --abyss:#141838;
+  --peri:#6f7fd0;
+  --haze:#c9c8e8;
+  --pearl:#e8d6b0;
+  --ink:#eef0fa;
+  --ink-dim:rgba(238,240,250,.58);
+  --ink-faint:rgba(238,240,250,.26);
+  --teal:#8fe3d8;
+  --glow:180,190,245;
+  --title:"Poiret One","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;   /* debug panels only */
+  --sans:"Josefin Sans","Helvetica Neue",Arial,sans-serif;   /* all small text */
+  --ko:"Gothic A1","Apple SD Gothic Neo",sans-serif;
+  --sub-en:clamp(13px,1.1vw,19px);   /* every English subtitle / instruction, wake through game */
+  --sub-ko:clamp(10px,.74vw,13px);   /* its Korean line, a quiet second */
+  --narr-en:clamp(16px,1.6vw,29px);   /* every line of the wake's narration: the size of "Now, wake up." */
+  --narr-ko:clamp(10px,1vw,18px);
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--void);color:var(--ink);overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-family:var(--sans);-webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+#stage{position:relative;overflow:hidden;background:var(--void);outline:none}
+#stage canvas{display:block;width:100%;height:100%;cursor:crosshair}
+#stage.dragging canvas{cursor:grabbing}
+.layer{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;text-align:center;padding-inline:12%;transition:opacity 2.2s ease}
+.gone{opacity:0}
+.verse{margin:0;font-family:var(--title);font-size:clamp(12px,1.6vw,20px);letter-spacing:.4em;padding-left:.4em;text-transform:uppercase}
+.wake{margin-top:3em;font-size:clamp(10px,1vw,13px);letter-spacing:.32em;color:var(--ink-dim);text-transform:uppercase;animation:breathe 4.6s ease-in-out infinite}
+#hint{justify-content:flex-end;padding-bottom:6.5%}
+#hint span{font-size:var(--sub-en);letter-spacing:.3em;color:var(--ink-dim);text-transform:uppercase}
+#hint{gap:.6em}
+/* the Korean line under each English one */
+/* Korean is a quiet shadow of the English: the thinnest weight, smaller, dimmer, a little tracked */
+.layer .kr,#hint .kr,#tut .kr{margin:0;font-family:var(--ko);font-weight:200;font-size:var(--sub-ko);letter-spacing:.12em;color:rgba(238,240,250,.5);text-transform:none}
+.kr:empty{display:none}
+#edgeblur{position:absolute;inset:0;z-index:0;pointer-events:none;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  -webkit-mask-image:radial-gradient(ellipse 70% 62% at 50% 60%,transparent 50%,#000 100%);mask-image:radial-gradient(ellipse 70% 62% at 50% 60%,transparent 50%,#000 100%)}
+#tut svg .track{opacity:.25}
+#stage.tutOn #hint{opacity:0!important}   /* one slot at the bottom: the card wins */
+#tut .pair{display:flex;align-items:center;gap:.9em;transition:opacity .5s ease}
+#tut .pair.dim{opacity:.35}
+#tut .pair+.pair{margin-left:1.6em;padding-left:2.2em;border-left:1px solid rgba(190,198,248,.25)}
+#tut{width:max-content;max-width:94vw}   /* centred on its own width: the cards never squeeze into half the screen */
+#tut .en,#tut .kr{white-space:nowrap}
+#tut .pair .en{letter-spacing:.2em;line-height:1.6;font-size:calc(var(--sub-en)*.78)}   /* THE DEEP's three cards: two set lines each (broken in the copy), Korean under */
+#tut .pair+.pair{margin-left:1.4em;padding-left:2em}
+#tut .pair .kr{font-size:calc(var(--sub-ko)*.92)}
+#tut .pair svg{height:clamp(28px,2.6vw,46px)}
+#tut:has(.pair){flex-wrap:wrap;justify-content:center;row-gap:1.1em}   /* too narrow a screen: a card drops to a second row, never off the edge */
+#tut .pair .en{font-size:var(--sub-en);letter-spacing:.32em;text-transform:uppercase;color:var(--ink)}
+#tut svg .hold{stroke-width:2;transition:stroke-dashoffset .1s linear}
+#tut{position:absolute;left:50%;bottom:6.5%;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:1.5em;pointer-events:none;transition:opacity .8s ease}
+#tut svg{height:clamp(40px,4.2vw,70px);width:auto;fill:none;stroke:rgba(190,198,248,.9);stroke-width:1.2;overflow:visible}
+#tut svg text{fill:rgba(226,230,252,.95);stroke:none;font:300 12px var(--sans);letter-spacing:.12em}
+#tut svg .on{fill:rgba(190,198,248,.35)}
+#tut svg .ring{animation:tutRing 1.8s ease-out infinite}
+@keyframes tutRing{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+#tut .t{display:flex;flex-direction:column;gap:.55em}
+#tut .en{font-size:var(--sub-en);letter-spacing:.32em;text-transform:uppercase;color:var(--ink)}
+#named{justify-content:flex-end;padding-bottom:8%}
+#named .nm{margin:0;font-family:var(--title);font-size:clamp(16px,1.7vw,28px);letter-spacing:.55em;padding-left:.55em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 18px rgba(150,165,240,.6)}
+#part .eyeOpen[hidden]{display:none}   /* #stage canvas{display:block} would otherwise keep it on screen */
+#part{gap:.7em;transition:opacity 1.2s ease}
+#part .dot{width:clamp(10px,1.1vw,15px);aspect-ratio:1;border-radius:50%;background:var(--pc,#fff);box-shadow:0 0 24px 6px var(--pc,#fff);margin-bottom:.9em}
+#part,#big{background:radial-gradient(ellipse 30% 24% at 50% 50%,rgba(4,5,12,.62),rgba(4,5,12,0) 72%)}
+#part .eyeOpen{width:clamp(180px,16vw,320px);height:auto;margin-bottom:.4em}
+#part.eye .dot{display:none}
+#part .en{margin:0;font-family:var(--title);letter-spacing:.55em;padding-left:.55em;font-size:clamp(18px,2.9vw,40px);color:var(--ink)}
+#part .ko{margin:0;font-size:clamp(10px,1vw,13px);letter-spacing:.3em;color:var(--ink-dim)}
+#part .no{margin:.8em 0 0;font-size:clamp(9px,.9vw,12px);letter-spacing:.3em;color:var(--teal);opacity:.85}
+/* the sounds you carry: a row of four at the top; the EYE, if found, joins small at the end */
+#carry{position:absolute;left:0;right:0;top:4.5%;display:flex;justify-content:center;align-items:center;gap:clamp(10px,1vw,18px);pointer-events:none;transition:opacity 1.6s ease}
+#carry i{position:relative;width:clamp(28px,2.4vw,44px);height:clamp(28px,2.4vw,44px);border-radius:50%;border:1px dashed rgba(190,198,248,.3);background:center/78% no-repeat;transition:border-color .8s ease,box-shadow .8s ease,opacity .8s ease}
+#carry i::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px dotted rgba(190,198,248,.16);animation:slotTurn 24s linear infinite}   /* a slot is a sonar ring, slowly turning */
+#carry i.on::after{border:1px solid rgba(190,198,248,.4);animation:slotPing 3.4s ease-out infinite}   /* filled: it sends out a soft ping */
+@keyframes slotTurn{to{transform:rotate(360deg)}} @keyframes slotPing{0%{transform:scale(.9);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+#carry i.on{border-style:solid;border-color:rgba(190,198,248,.6);box-shadow:0 0 16px rgba(150,165,240,.3),inset 0 0 10px rgba(150,165,240,.18)}
+#carry i.eye{width:clamp(20px,1.7vw,32px);height:clamp(20px,1.7vw,32px);margin-left:.6em;border-color:rgba(143,227,216,.5)}
+#big{gap:.9em}
+#big .en{margin:0;font-family:var(--title);letter-spacing:.6em;padding-left:.6em;font-size:clamp(18px,3vw,42px);color:var(--ink)}
+#big .ko{margin:0;font-size:clamp(10px,1vw,13px);letter-spacing:.32em;color:var(--ink-dim);text-transform:uppercase}
+#info{justify-content:flex-start;align-items:flex-start;padding:5% 0 0 5%;text-align:left;gap:.45em;transition:opacity .8s ease}
+/* everything that comes up on screen comes up the same way: out of the water, wavering, then still */
+.layer:not(.gone):not(#info)>*{animation:waterIn 1.4s cubic-bezier(.2,.7,.2,1) both}
+.layer:not(.gone):not(#info)>*:nth-child(2){animation-delay:.12s} .layer:not(.gone):not(#info)>*:nth-child(3){animation-delay:.24s} .layer:not(.gone):not(#info)>*:nth-child(n+4){animation-delay:.34s}
+#tut:not(.gone)>*{animation:waterIn 1.3s cubic-bezier(.2,.7,.2,1) both} #tut:not(.gone)>*:nth-child(2){animation-delay:.12s} #tut:not(.gone)>*:nth-child(3){animation-delay:.24s}
+@keyframes waterIn{0%{opacity:0;filter:blur(8px);transform:translateY(8px) skewX(5deg) scaleY(1.05)}35%{filter:blur(2.5px);transform:translateY(-2px) skewX(-3deg)}65%{transform:skewX(1.2deg)}100%{opacity:1;filter:none;transform:none}}
+/* the EYE opens: its light floods out over the sea */
+.eyeFlood{position:fixed;inset:0;z-index:30;pointer-events:none;background:radial-gradient(circle at 50% 45%,rgba(252,246,226,.95) 0%,rgba(238,227,189,.55) 20%,rgba(238,227,189,0) 46%);animation:eyeFlood 3.2s cubic-bezier(.2,.6,.2,1) forwards}
+@keyframes eyeFlood{0%{opacity:0;transform:scale(.15)}28%{opacity:1}100%{opacity:0;transform:scale(3.4)}}
+#info::before{content:'';display:block;width:0;height:1px;margin-bottom:.7em;background:linear-gradient(90deg,rgba(143,227,216,.75),rgba(143,227,216,0))}
+#info.show::before{animation:infoLine 1.3s cubic-bezier(.2,.7,.2,1) forwards}
+#info.show .no,#info.show .parts,#info.show .ko{animation:infoIn 1.2s cubic-bezier(.2,.7,.2,1) both}
+#info.show .parts{animation-delay:.15s} #info.show .ko{animation-delay:.35s}
+@keyframes infoLine{to{width:min(280px,18vw)}}
+@keyframes infoIn{from{opacity:0;filter:blur(7px);transform:translateX(-16px);letter-spacing:.7em}}   /* sharpens out of the water */
+#info .no{margin:0;font-size:clamp(10px,1vw,13px);letter-spacing:.3em;color:var(--teal)}
+#info .parts{margin:0;font-family:var(--title);font-size:clamp(11px,1.2vw,16px);letter-spacing:.3em;color:var(--ink)}
+#info .ko{margin:0;font-size:clamp(10px,1vw,13px);letter-spacing:.25em;color:var(--ink-dim)}
+#info .act{margin:.8em 0 0;font-size:clamp(10px,.95vw,12px);letter-spacing:.28em;color:var(--ink-dim)}
+#names{position:absolute;inset:0;pointer-events:none}
+#names span{position:absolute;transform:translate(-50%,0);font-size:clamp(9px,.8vw,11px);letter-spacing:.3em;color:var(--ink-dim);white-space:nowrap;text-transform:uppercase;transition:opacity .6s}
+#end .wake{margin-top:3.4em}
+#end .verse,#end>.kr{filter:url(#endWater)}   /* the last words, seen through water */
+/* the ending's type: the English is wide-tracked caps (.4em), so the Korean (full-width glyphs, which read tighter at the same
+   tracking) opens to .34em and a touch larger to sit as its quiet echo. They arrive in turn: the English letter by letter out of the
+   water, then the Korean, then the number and name */
+#end>.kr{margin-top:1.1em;font-size:clamp(11px,.92vw,15px);letter-spacing:.34em;padding-left:.34em;color:rgba(238,240,250,.55)}
+#end:not(.gone)>.verse{animation:none}
+#end .verse i{display:inline-block;font-style:normal;white-space:pre;opacity:0;animation:endCh 2s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes endCh{0%{opacity:0;filter:blur(7px);transform:translateY(.4em)}100%{opacity:1;filter:none;transform:none}}
+#end:not(.gone)>.kr{animation:endFade 2.6s ease 1.9s both} #end:not(.gone)>#seal{animation:endFade 2.6s ease 3.4s both}
+@keyframes endFade{from{opacity:0;filter:blur(6px);transform:translateY(.3em)}}
+#end::before{content:"";position:absolute;left:50%;top:50%;width:60vmin;height:60vmin;margin:-30vmin 0 0 -30vmin;border-radius:50%;background:radial-gradient(circle,rgba(110,150,205,.13) 0%,rgba(110,150,205,.05) 40%,rgba(110,150,205,0) 70%);animation:endBreath 7s ease-in-out infinite;pointer-events:none}
+#end::after{content:"";position:absolute;left:50%;top:50%;width:46vmin;height:14vmin;margin:-7vmin 0 0 -23vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(180,200,240,0) 60%,rgba(180,200,240,.16) 76%,rgba(180,200,240,0) 92%);filter:blur(1.5px);animation:endRing 6.5s cubic-bezier(.15,.6,.3,1) infinite;pointer-events:none}   /* a ring of light spreading on the water, slowly, again and again */
+@keyframes endBreath{0%,100%{transform:scale(.9);opacity:.7}50%{transform:scale(1.08);opacity:1}} @keyframes endRing{0%{transform:scale(.4);opacity:0}15%{opacity:.8}100%{transform:scale(2.6);opacity:0}}
+#seal{margin:1.6em 0 0;font-size:clamp(9px,.95vw,12px);letter-spacing:.22em;color:var(--teal);opacity:.8;text-transform:uppercase}
+body{transition:background 5s ease}
+body.sense{background:#eee3bd}
+#stage{transition:filter 4.5s cubic-bezier(.6,0,.3,1)}
+#stage.sense{filter:invert(1) sepia(1) saturate(1.55) hue-rotate(-10deg) brightness(.98) contrast(1.14)}   /* yellowed board, brown traces (eye_ref) */
+#debug{position:absolute;right:10px;top:10px;margin:0;pointer-events:none;font:11px/1.5 var(--mono);color:var(--teal);opacity:.8;white-space:pre;text-align:right}
+
+/* the opening: the hole */
+#op{position:absolute;inset:0;z-index:5}
+#stage #op{cursor:default}
+#opui{position:absolute;inset:0;z-index:6;pointer-events:none;font-weight:300;font-size:clamp(11px,.8vw,16px);letter-spacing:.22em;text-transform:uppercase;color:rgba(238,240,250,.62);transition:opacity 1s ease}
+#opui .c{position:absolute;bottom:3.4%;font-variant-numeric:tabular-nums}
+#opui .bl{left:2.6%} #opui .br{right:2.6%} #opui .bc{left:50%;transform:translateX(-50%);white-space:nowrap}
+#opui b{font-weight:400;color:var(--ink)}
+#opui .tb{left:50%;transform:translateX(-50%);display:flex;gap:2.4em;font-size:.86em;align-items:center;white-space:nowrap;color:rgba(238,240,250,.55)}   /* the trackball, taught at the title */
+#opui .tb span{display:flex;align-items:center;gap:.75em}
+#opui .tb svg{height:2.2em;width:auto;fill:none;stroke:rgba(238,240,250,.35);stroke-width:1.3}
+#opui .tb svg .on{stroke:var(--ink);stroke-width:2.2;fill:rgba(190,205,255,.32)}
+#opui .okr{display:block;margin-top:.5em;font-family:var(--ko);font-weight:200;font-size:var(--sub-ko);letter-spacing:.12em;text-transform:none;opacity:.7}
+#nameWrap small .okr{display:inline;margin:0 0 0 .6em}
+#nameWrap{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:.5em;pointer-events:auto}
+#name{width:17em;background:transparent;border:0;border-bottom:1px solid rgba(238,240,250,.7);padding:.45em 0;text-align:center;
+  font:inherit;font-size:1.15em;letter-spacing:.34em;color:var(--ink);text-transform:uppercase;outline:none;caret-color:var(--teal);
+  text-shadow:0 0 10px rgba(var(--glow),.7);box-shadow:0 10px 14px -12px rgba(var(--glow),.9);transition:border-color .4s,box-shadow .4s}
+#name::placeholder{color:rgba(238,240,250,.82);text-shadow:0 0 12px rgba(var(--glow),.75)}
+#name:focus{border-bottom-color:var(--teal);box-shadow:0 12px 18px -12px rgba(var(--glow),1)}
+/* surfaces and sinks back, slowly, like something seen through water */
+#opui .bc{color:rgba(238,240,250,.85);text-shadow:0 0 12px rgba(var(--glow),.45);animation:dreamFade 9s ease-in-out infinite}
+@keyframes dreamFade{0%,100%{opacity:.06;filter:blur(2px)}45%,60%{opacity:.9;filter:blur(0)}}
+#nameWrap{display:none!important}   /* the name is asked in the wake now, just before the dream */
+#name:focus + small{opacity:1}
+body.titlebottom #nameWrap{bottom:9%}
+#toast{position:absolute;left:50%;top:6%;transform:translateX(-50%);z-index:7;font-size:12px;letter-spacing:.2em;color:var(--ink);opacity:0;transition:opacity .4s;pointer-events:none;text-transform:uppercase}
+#drop{position:absolute;inset:1.4vw;z-index:8;border:1px dashed rgba(238,240,250,.35);display:none;place-items:center;font-size:13px;letter-spacing:.16em;color:var(--ink);background:rgba(3,6,9,.6);text-align:center;line-height:2}
+#drop.on{display:grid}
+#grain{--grain:.14;position:absolute;inset:0;z-index:15;pointer-events:none;opacity:var(--grain);mix-blend-mode:overlay;background-size:192px 192px;transition:opacity 1.5s ease}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@keyframes breathe{0%,100%{opacity:.22}50%{opacity:.85}}
+@media (prefers-reduced-motion:reduce){.wake,#opui .bc{animation:none;opacity:.6}.layer{transition:opacity .6s ease}}
+
+/* ── wake: the face, the crack, the dolphin inside ── */
+#wake{position:absolute;inset:0;z-index:9;display:none;background:#04050b;
+  --void:#05060c; --ink:#eef0fa; --dim:rgba(238,240,250,.5); --faint:rgba(238,240,250,.3); --teal:#8fe3d8;
+  --title:"Poiret One","Helvetica Neue",Arial,sans-serif; --mono:"IBM Plex Mono",Consolas,Menlo,monospace; --sans:"Josefin Sans","Helvetica Neue",Arial,sans-serif; --ko:"Gothic A1","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  font-family:var(--sans);color:var(--ink)}
+#wake #note{display:flex;flex-direction:column;align-items:flex-end;gap:.35em}
+#wake #note span{font-family:var(--ko);text-transform:none;letter-spacing:.06em}
+#filewarn{position:fixed;left:50%;top:3vh;transform:translateX(-50%);z-index:20;display:none;max-width:40em;font-family:var(--ko);font-size:14px;line-height:1.9;
+  color:#ffd2c4;background:rgba(3,6,9,.85);border:1px solid rgba(255,210,196,.4);padding:1em 1.5em;text-align:center}
+  #wake canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #stage #wake canvas{cursor:none}   /* the wake draws its own sonar cursor */
+  /* subtitles: English above, Korean below. The first two lines sit either side of the face (left high, right low),
+     everything after sits under it. Letters sink in like things settling in water and rise away like bubbles. */
+  #wake .sub{position:absolute;display:flex;flex-direction:column;gap:.75em;pointer-events:none;
+        text-shadow:0 0 18px rgba(150,165,240,.45),0 0 3px rgba(238,240,250,.25)}
+  #wake #sub{left:0;right:0;bottom:10%;align-items:center;text-align:center}
+  #wake #sub.mid{bottom:auto;top:50%;transform:translateY(-50%)}   /* the last words, alone in the dark, in the middle */
+  #wake #subL{right:65%;top:29%;align-items:flex-end;text-align:right}
+  #wake #subR{left:65%;top:60%;align-items:flex-start;text-align:left}
+  #wake .sub .en,#wake .sub .en2{font-family:var(--title);white-space:nowrap}   /* the narration, all in the voice of "Now, wake up."; letters are spans, so never let a word break */
+  #wake .sub .ko,#wake .sub .ko2{white-space:nowrap}
+  #wake .sub .en{font-size:var(--narr-en);letter-spacing:.14em;font-weight:300}
+  #wake .sub .ko{font-family:var(--ko);font-size:var(--narr-ko);letter-spacing:.12em;font-weight:200;color:rgba(238,240,250,.55)}
+  #wake .sub .en2{margin-top:.6em;font-size:var(--narr-en);letter-spacing:.2em;color:var(--dim)}
+  #wake .sub .ko2{font-family:var(--ko);font-size:var(--narr-ko);letter-spacing:.12em;font-weight:200;color:rgba(238,240,250,.42)}
+  #wake .sub.big .en{font-family:var(--title);font-size:var(--narr-en);letter-spacing:.24em}
+  #wake .sub.dim{opacity:.42;transition:opacity 2.4s ease}
+  #wake .sub i{display:inline-block;font-style:normal;white-space:pre;opacity:0;transform:translateY(-.7em);filter:blur(6px)}
+  #wake .sub i.in{animation:sink 1.9s cubic-bezier(.2,.7,.3,1) forwards, sway 6s ease-in-out 1.9s infinite}
+  #wake .sub i.out{animation:rise 1.6s ease-in forwards}
+  #wake .sub.fading{opacity:0;filter:blur(4px);transition:opacity 4.5s ease,filter 4.5s ease}
+  @keyframes sink{0%{opacity:0;transform:translateY(-.7em);filter:blur(6px)}60%{opacity:1;filter:blur(.6px)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
+  @keyframes sway{0%,100%{opacity:1;transform:translate(0,0);filter:blur(0)}50%{opacity:1;transform:translate(var(--sx,.04em),var(--sy,.08em));filter:blur(0)}}
+  @keyframes rise{0%{opacity:1;transform:translateY(0);filter:blur(0)}100%{opacity:0;transform:translateY(-1.1em);filter:blur(5px)}}
+  @media (prefers-reduced-motion:reduce){#wake .sub i,#wake .sub i.in,#wake .sub i.out{animation:none;transform:none;filter:none;transition:opacity 1s}
+    #wake .sub i.in{opacity:1} #wake .sub i.out{opacity:0}}
+  /* the seven sounds, explained */
+  #wake #card{position:absolute;left:50%;bottom:5%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:.55em;text-align:center;
+        pointer-events:none;opacity:0;transition:opacity .5s ease;min-width:min(90vw,560px)}
+  #wake #card.on{opacity:1}
+  #wake #card .nm{font-family:var(--title);font-size:clamp(14px,1.5vw,24px);letter-spacing:.5em;padding-left:.5em}
+  #wake #card .l1{font-size:var(--sub-en);letter-spacing:.2em;font-weight:300}
+  #wake #card .k1{font-family:var(--ko);font-size:var(--sub-ko);letter-spacing:.12em;color:rgba(238,240,250,.5);font-weight:200}
+  #wake #card .g{margin-top:.5em;font-size:clamp(10px,.8vw,13px);letter-spacing:.24em;color:var(--teal);text-transform:uppercase}
+  #wake #card .kg{font-family:var(--ko);font-size:clamp(11px,.85vw,14px);color:rgba(143,227,216,.7);font-weight:300}
+  #wake #help{position:absolute;left:0;right:0;top:5%;text-align:center;font-size:var(--sub-en);letter-spacing:.26em;color:var(--faint);text-transform:uppercase;
+        opacity:0;transition:opacity .8s ease;pointer-events:none}
+  #wake #wtb{position:absolute;left:50%;top:5%;transform:translateX(-50%);display:flex;align-items:center;gap:.9em;opacity:0;transition:opacity .9s ease;pointer-events:none;white-space:nowrap}   /* the hint, small, where the hand is needed */
+  #wake #wtb.on{opacity:1} #wake #wtb svg{height:2.1em;width:auto;fill:none;stroke:rgba(238,240,250,.35);stroke-width:1.3} #wake #wtb svg .on{stroke:var(--ink);stroke-width:2.2;fill:rgba(190,205,255,.32)}
+  #wake #wtb .en{font-family:var(--sans);font-weight:300;font-size:calc(var(--sub-en)*.86);letter-spacing:.26em;text-transform:uppercase;color:rgba(238,240,250,.72)}
+  #wake #wtb .kr{display:block;margin-top:.45em;font-family:var(--ko);font-weight:200;font-size:var(--sub-ko);letter-spacing:.08em;color:rgba(238,240,250,.45)}
+  #wake #help.on{opacity:1} #help b{font-weight:400} #help.strong{color:var(--ink)} #help span{display:block;margin-top:.55em;font-family:var(--ko);font-size:var(--sub-ko);text-transform:none;letter-spacing:.06em}
+  /* the name, asked in the dark before the dream begins: one line, in the narration's own face */
+  #wake #wname{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1.2em;z-index:5;text-align:center;transition:opacity 1.4s ease}
+  #wake #wname.gone{opacity:0;pointer-events:none}
+  #wake #wname label{font-family:var(--sans);font-weight:300;font-size:var(--sub-en);letter-spacing:.34em;padding-left:.34em;color:rgba(238,240,250,.62);text-transform:uppercase}
+  #wake #wname input{width:min(460px,62vw);background:transparent;border:none;border-bottom:1px solid;border-image:linear-gradient(90deg,rgba(238,240,250,0),rgba(238,240,250,.45),rgba(238,240,250,0)) 1;
+    color:#eef0fa;font-family:var(--title);font-size:var(--narr-en);letter-spacing:.24em;padding:.25em 0 .35em .24em;text-align:center;outline:none;caret-color:var(--teal);
+    text-shadow:0 0 18px rgba(150,165,240,.45)}
+  #wake #wname small{display:flex;flex-direction:column;align-items:center;gap:.5em}
+  #wake #wname small .en{font-family:var(--sans);font-weight:300;font-size:var(--sub-en);letter-spacing:.22em;padding-left:.22em;color:rgba(238,240,250,.45);text-transform:uppercase}
+  #wake #wname small .kr{font-family:var(--ko);font-weight:200;font-size:var(--sub-ko);letter-spacing:.12em;color:rgba(238,240,250,.4)}
+  #wake #wname:not(.gone)>*{animation:waterIn 1.6s cubic-bezier(.2,.7,.2,1) both} #wake #wname:not(.gone)>*:nth-child(2){animation-delay:.2s} #wake #wname:not(.gone)>*:nth-child(3){animation-delay:.45s}
+  /* the name, under water: the letters seen through moving water (an SVG displacement), a pool of light that breathes behind them,
+     and each keystroke a drop — the letters shiver and a soft ring of light spreads out under the line */
+  #wake #wname{filter:url(#wnWater)}
+  #wake #wname::before{content:'';position:absolute;left:50%;top:50%;width:min(620px,80vw);height:16em;transform:translate(-50%,-50%);z-index:-1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 55%,rgba(120,150,220,.09) 0%,rgba(90,120,200,.04) 38%,rgba(60,80,160,0) 70%);animation:wnPool 7s ease-in-out infinite}
+  @keyframes wnPool{0%,100%{opacity:.7;transform:translate(-50%,-50%) scale(.94)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
+  #wake .wnRip{position:absolute;width:260px;height:56px;margin:-28px 0 0 -130px;border-radius:50%;pointer-events:none;z-index:4;
+    background:radial-gradient(closest-side,rgba(190,205,255,0) 58%,rgba(190,205,255,.22) 74%,rgba(190,205,255,0) 92%);filter:blur(1.5px);animation:wnRip 1.9s cubic-bezier(.15,.6,.3,1) forwards}
+  @keyframes wnRip{0%{transform:scale(.15);opacity:0}12%{opacity:1}100%{transform:scale(1.9);opacity:0}}
+  #wake #sub.named .en{letter-spacing:.32em}   /* the name, alone in the middle, a little more open than the lines after it */
+  #wake #note{position:absolute;right:2.4vw;bottom:3vh;font-size:11px;letter-spacing:.22em;color:var(--faint);text-transform:uppercase;z-index:4;transition:opacity 1.5s ease}
+  #wake #wdbg{position:absolute;left:12px;top:12px;margin:0;font:12px/1.6 var(--mono);color:var(--teal);white-space:pre;z-index:6}
+  #wake #dbgVid{position:absolute;left:12px;top:200px;width:240px;transform:scaleX(-1);opacity:.8;z-index:6;border:1px solid rgba(159,227,234,.4)}
+  @keyframes breathe{0%,100%{opacity:.25}50%{opacity:.9}}
+
+</style>
+
+</head>
+<body>
+<div id="filewarn">지금 파일을 더블클릭해서 열었어요 (주소가 file:/// 로 시작).<br>이렇게 열면 영상·돌고래·소리가 불러와지지 않아요. VS Code에서 index.html 오른쪽 클릭 → <b>Open with Live Server</b> 로 여세요.</div>
+<div id="stage" tabindex="0" aria-label="SLIP BENEATH. Touch the dark to dive. Click to send an echo, drag to look, W A S D to swim, Space to take a sound.">
+  <div id="edgeblur" aria-hidden="true"></div>
+  <div id="names"></div>
+  <div id="part" class="layer gone"><canvas class="eyeOpen" width="440" height="280" hidden></canvas><div class="dot"></div><p class="en"></p><p class="ko"></p><p class="kr"></p><p class="no"></p></div>
+  <div id="big" class="layer gone"><p class="en"></p><p class="ko"></p><p class="kr"></p></div>
+  <div id="info" class="layer gone"><p class="no"></p><p class="parts"></p><p class="ko"></p><p class="act"></p></div>
+  <div id="hint" class="layer gone"><span class="en"></span><span class="kr"></span></div>
+  <div id="tut" class="gone" aria-live="polite"></div>
+  <div id="named" class="layer gone"><p class="nm"></p></div>
+  <div id="carry" class="gone"><i></i><i></i><i></i><i></i></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="endWater" x="-10%" y="-80%" width="120%" height="260%"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.05" numOctaves="2" seed="11"><animate attributeName="baseFrequency" dur="14s" values="0.012 0.05;0.014 0.062;0.012 0.05" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="3.5" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+  <div id="end" class="layer gone">
+    <p class="verse">You returned to the deep.</p>
+    <p class="kr">당신은 깊은 바다로 돌아왔습니다.</p>
+    <p id="seal"></p>
+    <p class="wake gone" id="again">Click to wake again<span class="kr" style="display:block;margin-top:.6em">다시 깨어나려면 클릭하세요</span></p>
+  </div>
+  <pre id="debug" hidden></pre>
+
+  <canvas id="op" aria-hidden="true"></canvas>
+  <div id="opui">
+    <div id="nameWrap"><label class="sr" for="name">Your name</label><input id="name" maxlength="20" placeholder="your name" autocomplete="off" spellcheck="false"><small>enter · dive</small></div>
+    <div class="c bl">The Deep · <b id="deepN">—</b> beings</div>
+    <div class="c tb"><span><svg viewBox="0 0 64 44" aria-hidden="true"><rect x="2" y="4" width="60" height="36" rx="16"/><path d="M14 6V38M50 6V38"/><path class="on" d="M5 22Q4 10 14 6V38Q4 34 5 22Z"/><circle  cx="32" cy="22" r="15"/><circle  cx="32" cy="22" r="10"/></svg>click · dive</span></div>
+    <div class="c br">Headphones on</div>
+  </div>
+  <div id="toast"></div>
+  <div id="wake">
+    <canvas id="wgl"></canvas>
+    <canvas id="wfx"></canvas>
+    <div id="subL" class="sub"><div class="en"></div><div class="ko"></div></div>
+    <div id="subR" class="sub"><div class="en"></div><div class="ko"></div></div>
+    <div id="sub" class="sub"><div class="en"></div><div class="ko"></div><div class="en2"></div><div class="ko2"></div></div>
+    <div id="card"><div class="nm"></div><div class="l1"></div><div class="k1"></div><div class="g"></div><div class="kg"></div></div>
+    <div id="help"><b class="h1"></b><span class="h2"></span></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="wnWater" x="-15%" y="-60%" width="130%" height="220%"><feTurbulence id="wnTurb" type="fractalNoise" baseFrequency="0.011 0.055" numOctaves="2" seed="7" result="n"/><feDisplacementMap id="wnDisp" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+    <div id="wname" class="gone"><label for="wnameIn">your name</label><input id="wnameIn" maxlength="20" autocomplete="off" spellcheck="false"><small><span class="en">type your name · enter</span><span class="kr">이름을 적고 엔터를 누르세요</span></small></div>
+    <div id="note">this camera feed is not recorded<span>이 영상은 녹화되지 않습니다</span></div>
+    <pre id="wdbg" hidden></pre>
+    <video id="cam" playsinline muted></video>
+  </div>
+
+  <div id="drop">Drop symbol images here<br>heart · voice · bone · memory · soul · dream · sense in the file name<br>places each one in its seat</div>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script>if(location.protocol==='file:') document.getElementById('filewarn').style.display='block';</script>
+<script src="js/shared.js"></script>
+<script src="js/game.js"></script>
+<script src="js/opening.js"></script>
+<script type="module" src="js/wake.js"></script>
+</body>
+</html>
