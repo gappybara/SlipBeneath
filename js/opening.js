@@ -108,7 +108,7 @@ function drawTitleDraft(){
   }
 }
 function layout(){
-  const cw=stage.clientWidth||innerWidth, ch=stage.clientHeight||innerHeight, dpr=Math.min(devicePixelRatio||1,2);
+  const cw=stage.clientWidth||innerWidth, ch=stage.clientHeight||innerHeight, dpr=window.SB_DPR||Math.min(devicePixelRatio||1,2);
   const k=Math.min(dpr,2560/cw); W=Math.round(cw*k); H=Math.round(ch*k);
   for(const c of [world,titleCv,layer,cv,arcCv]){c.width=W;c.height=H}
   S=Math.min(H/1080,W/1920); CX=W*.5; CY=H*HOLE_Y; RH=Math.max(34,H*HOLE_R);
@@ -358,6 +358,7 @@ if(gl){
     /* oval vignette: follows the screen's own shape (1 at the edge midpoints, 1.41 at the corners) */
     vec2 uv=gl_FragCoord.xy/R-.5; uv.y+=.06; uv.y*=uv.y<0.?.85:1.;   /* centre sits a little low and the bottom falls off more gently */
     float ve=length(uv*2.); col*=1.-.6*smoothstep(.7,1.4,ve);
+    col+=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*(1.6/255.);   /* dither: no banding in the dark */
     gl_FragColor=vec4(col*(1.-BLACK),1.);
   }`;
   const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(o);return o};

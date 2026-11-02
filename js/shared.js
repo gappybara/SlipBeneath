@@ -1,4 +1,11 @@
 /* ───────── shared: the seven signs, drawn the same way everywhere (until real artwork replaces them) ───────── */
+window.SB_DPR=(()=>{ const q=new URLSearchParams(location.search).get('q'), budget=q==='low'?1.4e6:q==='high'?1e9:2.4e6;   // pixels a frame
+  return Math.max(.55,Math.min(devicePixelRatio||1,2,Math.sqrt(budget/Math.max(1,innerWidth*innerHeight)))); })();
+/* a governor: if the frame rate stays under 30 for two looks (2 s each), draw 15% fewer pixels, down to a floor — so a slower
+   machine eases itself instead of stalling (each scene re-reads SB_DPR on resize) */
+(()=>{ let n=0, t0=performance.now(), low=0; const f=t=>{ n++; const el=t-t0; if(el>2000){ const fps=n*1000/el; n=0; t0=t;
+    if(document.visibilityState==='visible'&&fps<30&&window.SB_DPR>.6){ if(++low>=2){ low=0; window.SB_DPR=Math.max(.55,window.SB_DPR*.85); dispatchEvent(new Event('resize')); } } else low=0; }
+  requestAnimationFrame(f); }; requestAnimationFrame(f); })();
 window.SBG=(()=>{
   const TAU=Math.PI*2, REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const C_CORE='rgba(248,249,255,', C_SIL='rgba(232,234,250,', C_PERI='rgba(111,127,208,', C_LIL='rgba(201,200,232,';

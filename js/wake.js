@@ -125,7 +125,7 @@ function autoLevels(){
 
 /* ───────── 3. scene ───────── */
 const renderer=new THREE.WebGLRenderer({canvas:$('wgl'),antialias:true,powerPreference:'high-performance'});
-const DPR=Math.min(devicePixelRatio||1,2);
+let DPR=window.SB_DPR||Math.min(devicePixelRatio||1,2);   // the shared pixel budget (shared.js)
 renderer.setPixelRatio(DPR); renderer.setClearColor(0x04050b,1); renderer.autoClear=false;
 const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(35,16/9,.1,200); camera.position.set(0,0,12);
 
@@ -185,9 +185,9 @@ const GL_COMMON=`
       vec2 tu=vec2(fract(rnd*61.73+cu.y*3.1),fract(rnd*23.37+cu.x*5.7)); float fl=smoothstep(rnd*.35,rnd*.35+.65,uFill);   /* first the outline, then the body fills */
       vec3 tgt=mix(texture2D(uDolR,tu).xyz,texture2D(uDolT,tu).xyz,fl*fl*(3.-2.*fl));
       float sc=uScatter*uScatter*(3.-2.*uScatter); p.xy+=od*sc*(9.+rnd*9.); p.z+=sc*(rnd-.5)*7.;                            /* first they fly apart, out of the frame */
-      float m=smoothstep(rnd*.4,rnd*.4+.6,uMorph), e=m*m*(3.-2.*m);
-      vec2 d=tgt.xy-uDolC.xy; float rT=max(length(d),.05), aT=atan(d.y,d.x), r0=11.+rnd*6.;                                /* then a golden spiral (r grows by phi each quarter turn) */
-      float th0=aT+1.5708*log(r0/rT)/.48121, th=mix(th0,aT,e), rr=rT*exp(.48121*(th-aT)/1.5708);                            /* … from far outside, round and in, to its place */
+      float r2=fract(rnd*17.31+cu.x*3.7), m=smoothstep(r2*.68,r2*.68+.32,uMorph), e=m*m*(3.-2.*m);                        /* each grain sets off at its own moment: they trickle in, not as one mass */
+      vec2 d=tgt.xy-uDolC.xy; float rT=max(length(d),.05), aT=atan(d.y,d.x), r0=9.+fract(rnd*7.7)*15.;                                /* then a golden spiral (r grows by phi each quarter turn) */
+      float th0=aT+1.5708*log(r0/rT)/.48121+(fract(rnd*3.3)-.5)*1.4, th=mix(th0,aT,e), rr=rT*exp(.48121*(th-aT)/1.5708);                            /* … from far outside, round and in, to its place */
       vec3 sp=vec3(uDolC.xy+vec2(cos(th),sin(th))*rr,mix(uDolC.z+(rnd-.5)*6.,tgt.z,e));
       p=mix(p,sp,smoothstep(0.,.14,m)); cr=0.; rimK=smoothstep(.8,1.,m)*(1.-fl); }
     gone=cr; return p; }`;
@@ -532,6 +532,7 @@ const compMat=new THREE.ShaderMaterial({uniforms:{t:{value:null},b:{value:null},
       c+=vec3(.78,.82,1.)*flash*.35;
       vec2 v=vUv-.5; c*=1.-dot(v,v)*1.1;
       c+=(h(vUv*vec2(1920.,1080.)+fract(time*13.7)*100.)-.5)*grain;
+      c+=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)*(1.6/255.);   /* dither: no banding in the dark */
       gl_FragColor=vec4(max(c,0.)*fade,1.); }`});
 /* behind the face: the mandala is the water itself. Every echo's rings, folded by their mirror images, interfere into one
    symmetric pattern drawn only in dots; the crests carry the dots outward and the face, mirrored in its own outline and bent by
@@ -1125,16 +1126,16 @@ function step(dt){
      with one low breath (3.4–4.3) · a moment of dark · very fine grains rise from below and the dolphin's eyes come first (4.5–6),
      its body after (5.3–7.6). The skull is not seen. */
   else if(state==='open'){
-    u.uOpen.value=ss(0,3.4,st); light=.5*(1-ss(.5,2.5,st)); u.uCrumble.value=ss(3.9,4.8,st); u.uScatter.value=ss(3.9,5.2,st); u.uMorph.value=ss(4.6,8.4,st); u.uFill.value=ss(7.8,9.2,st); u.uMorphOut.value=ss(9,10.6,st);
+    u.uOpen.value=ss(0,3.4,st); light=.5*(1-ss(.5,2.5,st)); u.uCrumble.value=ss(3.9,4.8,st); u.uScatter.value=ss(3.9,5.2,st); u.uMorph.value=ss(4.4,9.4,st); u.uFill.value=ss(8.6,10,st); u.uMorphOut.value=ss(9.8,11.4,st);
     if(st>3.9&&st-dt<=3.9){ boom(); whoosh(); deepSwell(); flash=1; pulses.push(clock); pulses.push(clock+.12); }   // after a held breath: the boom, a white ring, and the face lets go
-    if(st>8.6&&st-dt<=8.6) firstCall(.35);   // its eyes open: the first, faint click
+    if(st>9.4&&st-dt<=9.4) firstCall(.35);   // its eyes open: the first, faint click
     skullMat.uniforms.uSkull.value=.06*(1-ss(0,.5,st)); if(st>.6) skull.visible=false;
     const rk=ss(6.4,7.2,st); riseMat.uniforms.uK.value=rk; if(rk>0) riseMat.uniforms.uT.value+=dt;
-    eyeRev=ss(8.4,9.4,st); reveal=ss(8.8,10.8,st);
+    eyeRev=ss(9.2,10.2,st); reveal=ss(9.6,11.6,st);
     camera.position.z=lerp(11.2,7.4,ss(0,10.8,st))-1.5*ss(3.7,5.4,st)*(1-ss(5.4,10,st)); camera.position.y=-.25*ss(3.7,5.5,st)*(1-ss(5.5,10,st));   // through the gap as the halves go, then settling back to meet it
-    u.uFocus.value=lerp(0,-4.3,ss(6.5,9.6,st));
-    if(st>5.1) lqPts.visible=false; if(st>7.6) dolphin.visible=true;   // not before: its dark body would show against the thrown grains
-    if(st>11.2){ go('circle'); ringK=0; lastInput=clock; stopCamera(); ringEchoT=-9; sign.forEach(s=>s.born=0); firstEcho(); }   // it sends its first echo; the signs answer
+    u.uFocus.value=lerp(0,-4.3,ss(7,10.4,st));
+    if(st>5.1) lqPts.visible=false; if(st>8.4) dolphin.visible=true;   // not before: its dark body would show against the thrown grains
+    if(st>12){ go('circle'); ringK=0; lastInput=clock; stopCamera(); ringEchoT=-9; sign.forEach(s=>s.born=0); firstEcho(); }   // it sends its first echo; the signs answer
   }
   else if(state==='circle'){                                   // the seven sounds, around its head
     light=0; ringK=ss(0,2.5,st); compMat.uniforms.rip.value=1-ss(0,2.5,st); riseMat.uniforms.uK.value=lerp(1,.6,ss(0,3,st)); riseMat.uniforms.uT.value+=dt;
@@ -1200,7 +1201,8 @@ function step(dt){
 }
 
 /* ───────── 8. frame ───────── */
-function resize(){ const w=WK.clientWidth||innerWidth, h=WK.clientHeight||innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+function resize(){ DPR=window.SB_DPR||DPR; renderer.setPixelRatio(DPR);   // (the governor may have lowered it)
+  const w=WK.clientWidth||innerWidth, h=WK.clientHeight||innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
   fx.width=w*DPR; fx.height=h*DPR; const pix=DPR*h/900; U.uPix.value=pix; dustMat.uniforms.uPix.value=pix;
   const W=w*DPR|0, H=h*DPR|0; [rtMain,rtA,rtB,rtBg].forEach(r=>r&&r.dispose());
   rtMain=new THREE.WebGLRenderTarget(W,H,rtOpts); rtA=new THREE.WebGLRenderTarget(W>>2,H>>2,rtOpts); rtB=new THREE.WebGLRenderTarget(W>>2,H>>2,rtOpts); rtBg=new THREE.WebGLRenderTarget(Math.min(W>>1,1600),Math.min(H>>1,900),rtOpts);
@@ -1215,7 +1217,7 @@ function frame(now){
   fg.clearRect(0,0,fx.width,fx.height);
   if(state!=='idle'){
     const faceLive=state==='dreaming'||state==='human'||state==='calling'||state==='light'||state==='wake'||(state==='open'&&st<4.6);
-    facePts.visible=faceLive||(state==='open'&&U.uDolOK.value>.5&&st<11);   // the grains stay on while they become the dolphin
+    facePts.visible=faceLive||(state==='open'&&U.uDolOK.value>.5&&st<11.8);   // the grains stay on while they become the dolphin
     $('note').style.opacity=faceLive?'':'0';   // the camera note only while the camera is on
     if(CAM) SBCam.paused=faceLive&&camOK;          // while the wake watches the face, the camera control rests
     if(faceLive&&camOK){ readFace(now); if(++lv%15===0) autoLevels(); }
@@ -1256,5 +1258,5 @@ function frame(now){
 }
 requestAnimationFrame(frame);
 window.SBWake={ start(name,cb){ onDone=cb; begin(); },   // the name is asked in the wake now (askName)
-  get state(){return state}, get st(){return st}, set speed(v){TS=v}, knock, answer, sign, bg:bgMat, go(s){ go(s); }, get morph(){ return {ok:U.uDolOK.value,m:U.uMorph.value,face:facePts.visible,dol:dolLoaded}; } };
+  get state(){return state}, get st(){return st}, set speed(v){TS=v}, get scene(){return scene}, get renderer(){return renderer}, knock, answer, sign, bg:bgMat, go(s){ go(s); }, get morph(){ return {ok:U.uDolOK.value,m:U.uMorph.value,face:facePts.visible,dol:dolLoaded}; } };
 window.__wake=window.SBWake;

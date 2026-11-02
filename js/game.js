@@ -33,7 +33,7 @@ const stageEl=$('stage'), hintEl=$('hint'), endEl=$('end'), againEl=$('again'),
 
 /* ───────── renderer ───────── */
 const renderer=new THREE.WebGLRenderer({antialias:false,preserveDrawingBuffer:true,alpha:false,powerPreference:'high-performance'});
-const DPR=Math.min(devicePixelRatio||1,2);
+let DPR=window.SB_DPR||Math.min(devicePixelRatio||1,2);   // the shared pixel budget (shared.js)
 renderer.setPixelRatio(DPR); renderer.autoClear=false; renderer.setClearColor(0x05060c,1);
 stageEl.prepend(renderer.domElement);
 const scene=new THREE.Scene();
@@ -1794,6 +1794,7 @@ function tick(dt){
 
 /* ───────── sizing & input ───────── */
 function resize(){
+  DPR=window.SB_DPR||DPR; renderer.setPixelRatio(DPR);   // (the governor may have lowered it)
   const w=document.body.clientWidth, h=document.body.clientHeight;
   // fill the whole screen (no letterbox); the camera widens or narrows with it
   const sw=w, sh=h;
