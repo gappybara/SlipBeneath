@@ -946,16 +946,19 @@ const CAMG=!!(window.SBCam&&SBCam.on);   // cam.html: a step more of guidance, a
 const tutEl=$('tut'), namedEl=$('named');
 const KEY=(x,y,w,l)=>`<rect x="${x}" y="${y}" width="${w}" height="34" rx="6"/><text x="${x+w/2}" y="${y+22}" text-anchor="middle">${l}</text>`;
 /* a trackball, drawn thin (the exhibition's mouse): body, two buttons, the ring, the ball — `on` lights the part being taught */
-const TB=on=>`<svg viewBox="0 0 64 44" style="height:clamp(24px,2.3vw,38px)"><rect x="2" y="4" width="60" height="36" rx="16"/><path d="M14 6V38M50 6V38"/>`
-  +`<path ${on==='btn'?'class="on"':''} d="M5 22Q4 10 14 6V38Q4 34 5 22Z"/><circle ${on==='ring'?'class="on"':''} cx="32" cy="22" r="15"/><circle ${on==='ball'?'class="on"':''} cx="32" cy="22" r="10"/></svg>`;
+const TBP=on=>`<rect x="2" y="4" width="60" height="36" rx="16"/><path d="M14 6V38M50 6V38"/><path ${on==='btn'?'class="on"':''} d="M5 22Q4 10 14 6V38Q4 34 5 22Z"/>`
+  +`<circle ${on==='ring'?'class="on"':''} cx="32" cy="22" r="15"/><circle ${on==='ball'?'class="on"':''} cx="32" cy="22" r="10"/>`;
+const TB=on=>`<svg viewBox="0 0 64 44" style="height:clamp(24px,2.3vw,38px)">${TBP(on)}</svg>`;
+/* the same trackball inside a hold ring (the long press that puts you to sleep) */
+const TBH=on=>`<svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" class="track"/><circle cx="40" cy="40" r="36" class="hold" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 40 40)"/><g transform="translate(14,25) scale(.81)">${TBP(on)}</g></svg>`;
 const TUT={
   swim:{svg:TB('ring'), en:'turn the ring to swim  ·  roll to look'},
   echo:{svg:TB('btn'), en:'send an echo'},
   goal:{svg:`<svg viewBox="0 0 122 22" style="height:clamp(12px,1.1vw,20px)"><circle cx="15" cy="11" r="6"/><circle cx="46" cy="11" r="6"/><circle cx="77" cy="11" r="6"/><circle cx="108" cy="11" r="6"/></svg>`, en:'find four sounds in the dark'},
-  deep:{html:`<div class="pair"><svg viewBox="0 0 80 80" style="height:clamp(24px,2.3vw,38px)"><rect x="28" y="20" width="24" height="40" rx="12"/><path d="M40 20V34M28 34H52"/><path d="M28 34V32A12 12 0 0 1 40 20V34Z" class="on"/></svg><div class="t"><span class="en">echo<br>find the others</span><span class="kr">에코로 다른 존재 찾기</span></div></div>`
+  deep:{html:`<div class="pair">${TB('btn')}<div class="t"><span class="en">echo<br>find the others</span><span class="kr">에코로 다른 존재 찾기</span></div></div>`
     +`<div class="pair listen"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" class="track"/><circle cx="40" cy="40" r="36" class="hold ehold" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 40 40)"/><rect x="22" y="23" width="36" height="34" rx="6"/><text x="40" y="46" text-anchor="middle">E</text></svg><div class="t"><span class="en">near a being<br>hold E</span><span class="kr">존재 가까이에서 E를 길게 눌러 듣기</span></div></div>`
-    +`<div class="pair"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" class="track"/><circle cx="40" cy="40" r="36" class="hold" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 40 40)"/><rect x="28" y="20" width="24" height="40" rx="12"/><path d="M40 20V34M28 34H52"/><path d="M40 20A12 12 0 0 0 28 32V34H40Z" class="on"/></svg><div class="t"><span class="en">hold<br>to sleep</span><span class="kr">길게 눌러 잠들기</span></div></div>`},
-  sleep:{svg:`<svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" class="track"/><circle cx="40" cy="40" r="36" class="hold" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 40 40)"/><rect x="28" y="20" width="24" height="40" rx="12"/><path d="M40 20V34M28 34H52"/><path d="M40 20A12 12 0 0 0 28 32V34H40Z" class="on"/></svg>`, en:'hold the mouse to sleep'},
+    +`<div class="pair">${TBH('btn')}<div class="t"><span class="en">hold<br>to sleep</span><span class="kr">길게 눌러 잠들기</span></div></div>`},
+  sleep:{svg:`${TBH('btn')}`, en:'hold the mouse to sleep'},
   take:{svg:`<svg viewBox="0 0 172 40" style="height:clamp(24px,2.3vw,38px)">${KEY(3,3,166,'SPACE')}</svg>`, en:'take the sound'},
 };
 /* with the camera (cam.html): the same cards, saying what to do with your body */

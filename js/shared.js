@@ -3,7 +3,8 @@ window.SB_DPR=(()=>{ const q=new URLSearchParams(location.search).get('q'), budg
   return Math.max(.55,Math.min(devicePixelRatio||1,2,Math.sqrt(budget/Math.max(1,innerWidth*innerHeight)))); })();
 /* a governor: if the frame rate stays under 30 for two looks (2 s each), draw 15% fewer pixels, down to a floor — so a slower
    machine eases itself instead of stalling (each scene re-reads SB_DPR on resize) */
-(()=>{ let n=0, t0=performance.now(), low=0; const f=t=>{ n++; const el=t-t0; if(el>2000){ const fps=n*1000/el; n=0; t0=t;
+(()=>{ if(new URLSearchParams(location.search).get('q')==='high') return;   // the high-quality version (for recording) keeps its full resolution
+  let n=0, t0=performance.now(), low=0; const f=t=>{ n++; const el=t-t0; if(el>2000){ const fps=n*1000/el; n=0; t0=t;
     if(document.visibilityState==='visible'&&fps<30&&window.SB_DPR>.6){ if(++low>=2){ low=0; window.SB_DPR=Math.max(.55,window.SB_DPR*.85); dispatchEvent(new Event('resize')); } } else low=0; }
   requestAnimationFrame(f); }; requestAnimationFrame(f); })();
 window.SBG=(()=>{
