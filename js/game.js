@@ -1377,7 +1377,8 @@ function raysTick(){ const on=state==='play'&&!paused;   // only in the sea: THE
   const look=sstep(-0.7,0.25,me.pitch);   // looking up: the light; looking down: the floor
   raysEl.style.opacity=on?((state==='play'?0.38:0.24)*fade*(0.25+0.75*look)).toFixed(3):'0';
   if(on){ const w=raysEl.clientHeight*2; raysEl.style.backgroundPosition=`${(-(me.yaw/TAU)*w*1.5).toFixed(1)}px ${(Math.min(0,me.pitch)*raysEl.clientHeight*0.35).toFixed(1)}px`; } }   // only ever slides up: its top edge never shows
-function sprayTick(){ const on=!paused&&(state==='archive'||state==='sleep'||state==='play'); sprayCv.style.opacity=on?String((state==='play'?.7:.85)*fade):'0'; scVeil.style.opacity=on?'1':'0'; if(!on) return;
+let sprayN=0;
+function sprayTick(){ const on=!paused&&(state==='archive'||state==='sleep'||state==='play'); sprayCv.style.opacity=on?String((state==='play'?.7:.85)*fade):'0'; scVeil.style.opacity=on?'1':'0'; if(!on||(++sprayN&1)) return;   // every other frame: the copy back from the GPU is the costly part
   const w=Math.max(1,renderer.domElement.width/4|0), h=Math.max(1,renderer.domElement.height/4|0); if(sprayCv.width!==w){ sprayCv.width=w; sprayCv.height=h; scVeil.width=w; scVeil.height=h; veilMask.width=w; veilMask.height=h; }
   sprayG.globalCompositeOperation='copy'; sprayG.filter='blur(3px)'; sprayG.drawImage(renderer.domElement,0,0,w,h); sprayG.filter='none';
   // the mask: the picture's edges (a gaussian softening toward the rim), and — while a being's music is open — the area behind it

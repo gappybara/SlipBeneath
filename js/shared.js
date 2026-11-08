@@ -4,8 +4,8 @@ window.SB_DPR=(()=>{ const q=new URLSearchParams(location.search).get('q'), budg
 /* a governor: if the frame rate stays under 30 for two looks (2 s each), draw 15% fewer pixels, down to a floor — so a slower
    machine eases itself instead of stalling (each scene re-reads SB_DPR on resize) */
 (()=>{ if(new URLSearchParams(location.search).get('q')==='high') return;   // the high-quality version (for recording) keeps its full resolution
-  let n=0, t0=performance.now(), low=0; const f=t=>{ n++; const el=t-t0; if(el>2000){ const fps=n*1000/el; n=0; t0=t;
-    if(document.visibilityState==='visible'&&fps<30&&window.SB_DPR>.6){ if(++low>=2){ low=0; window.SB_DPR=Math.max(.55,window.SB_DPR*.85); dispatchEvent(new Event('resize')); } } else low=0; }
+  const floor=Math.max(.7,window.SB_DPR*.75); let n=0, t0=performance.now(), low=0; const f=t=>{ n++; const el=t-t0; if(el>2000){ const fps=n*1000/el; n=0; t0=t;
+    if(document.visibilityState==='visible'&&fps<30&&window.SB_DPR>floor+.01){ if(++low>=2){ low=0; window.SB_DPR=Math.max(floor,window.SB_DPR*.88); dispatchEvent(new Event('resize')); } } else low=0; }
   requestAnimationFrame(f); }; requestAnimationFrame(f); })();
 window.SBCursor=(()=>{ let el=null, ring=null, x=-1e4, y=-1e4, hot=0, want=0, shown=true; const t0=performance.now();
   function make(){ if(el) return; const st=document.createElement('style');

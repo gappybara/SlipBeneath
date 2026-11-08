@@ -19,7 +19,7 @@ window.SBCam=(()=>{
   const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)), lerp=(a,b,k)=>a+(b-a)*k;
   const T={ dead:.035, full:.2, turn:1.0, look:2.2, sens:1, leanOn:1.02, leanOff:.965, jaw:.34, jawOff:.18, gap:.6, fist:1.25, open:1.7, still:.024, blink:.55 };   // still: a standing hand trembles; this much wrist drift between reads still counts as held
   const S={full:false,found:false,cal:null,calN:0,yaw:0,pitch:0,size:0,sy:0,sp:0,lean:1,jaw:0,blink:0,fist:0,open:0,still:0,lastW:null,hand:false, ly:0,lp:0,eyesT:0,palmT:0};
-  const edges={mouth:false,fist:false}; let jawArmed=true, lastMouth=-9, fistWas=0, paused=false, ready=false, face=null, hand=null, lastVT=-1, frameN=0;
+  const edges={mouth:false,fist:false}; let jawArmed=true, lastMouth=-9, fistWas=0, paused=false, ready=false, face=null, hand=null, lastVT=-1, frameN=0, handDue=false;
   const video=document.createElement('video'); video.playsInline=true; video.muted=true;
   /* the small panel: the mirror, and one line of what it sees */
   const box=document.createElement('div'); box.id='camctl'; box.style.display='none';   // hidden: no face on screen while playing (V shows it)
@@ -62,8 +62,9 @@ window.SBCam=(()=>{
   function loop(now){ const dt=Math.min(.05,(now-last)/1000); last=now;
     if(!paused&&face&&video.readyState>=2&&video.currentTime!==lastVT&&(++skip%2===0||S.calN<75)){ lastVT=video.currentTime; frameN++;   // ~15 reads a second: enough for a mouth, light on the GPU
       const r=face.detectForVideo(video,now), lm=r.faceLandmarks&&r.faceLandmarks[0]; if(lm) readFace(lm,r.faceBlendshapes&&r.faceBlendshapes[0]); else S.found=false;
-      if(hand&&frameN%2===0){ const hr=hand.detectForVideo(video,now); readHand(hr.landmarks&&hr.landmarks[0]); }   // the hand: palm and fist, in both modes
+      if(hand&&frameN%2===0) handDue=true;   // the hand: palm and fist, in both modes
       if(S.found&&S.calN<75){ if(!S.cal) S.cal={yaw:0,pitch:0,size:0}; const n=++S.calN; for(const k of ['yaw','pitch','size']) S.cal[k]+=(S[k]-S.cal[k])/n; if(n===75) line.textContent='ready'; } }
+    else if(handDue&&!paused&&video.readyState>=2){ handDue=false; const hr=hand.detectForVideo(video,now); readHand(hr.landmarks&&hr.landmarks[0]); }   // the hand: palm and fist, on a frame of its own
     if(S.cal&&S.calN>=75&&S.found){
       S.sy=lerp(S.sy,(S.yaw-S.cal.yaw)*T.sens,dt*4); S.sp=lerp(S.sp,(S.pitch-S.cal.pitch)*T.sens,dt*4); S.lean=lerp(S.lean,S.size/S.cal.size,dt*3);
       mouth(S.jaw);
