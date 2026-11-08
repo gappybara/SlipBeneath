@@ -7,6 +7,11 @@ window.SB_DPR=(()=>{ const q=new URLSearchParams(location.search).get('q'), budg
   const floor=Math.max(.7,window.SB_DPR*.75); let n=0, t0=performance.now(), low=0; const f=t=>{ n++; const el=t-t0; if(el>2000){ const fps=n*1000/el; n=0; t0=t;
     if(document.visibilityState==='visible'&&fps<30&&window.SB_DPR>floor+.01){ if(++low>=2){ low=0; window.SB_DPR=Math.max(floor,window.SB_DPR*.88); dispatchEvent(new Event('resize')); } } else low=0; }
   requestAnimationFrame(f); }; requestAnimationFrame(f); })();
+/* ?fps: a small meter in the corner — frames a second, the slowest frame, and the drawing resolution — to see what a machine really does */
+(()=>{ if(!new URLSearchParams(location.search).has('fps')) return; let el=null, n=0, t0=performance.now(), last=t0, worst=0;
+  const f=t=>{ n++; worst=Math.max(worst,t-last); last=t; if(t-t0>500){ if(!el&&document.body){ el=document.createElement('div'); el.style.cssText='position:fixed;left:8px;top:8px;z-index:2147483001;pointer-events:none;font:12px monospace;color:#cfe;background:rgba(0,0,0,.55);padding:3px 6px'; document.body.appendChild(el); }
+    if(el) el.textContent=`${(n*1000/(t-t0)).toFixed(0)} fps · worst ${worst.toFixed(0)} ms · dpr ${(window.SB_DPR||1).toFixed(2)}`; n=0; t0=t; worst=0; }
+    requestAnimationFrame(f); }; requestAnimationFrame(f); })();
 window.SBCursor=(()=>{ let el=null, ring=null, x=-1e4, y=-1e4, hot=0, want=0, shown=true; const t0=performance.now();
   function make(){ if(el) return; const st=document.createElement('style');
     st.textContent='html,body,body *{cursor:none!important}'
