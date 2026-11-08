@@ -793,10 +793,11 @@ function drawXray(){
 /* ───────── 6. sound ───────── */
 let AC=null, padG=null; const PH={};
 function audio(){
-  if(AC) return; const C=window.AudioContext||window.webkitAudioContext; if(!C) return; AC=(window.SBGame&&SBGame.A.ctx)||new C();
+  if(AC) return; const C=window.AudioContext||window.webkitAudioContext; if(!C) return; AC=(window.SBGame&&SBGame.A.ctx)||new C({latencyHint:window.SB_AUDIO_HINT||'balanced'});
+  if(!AC.out){ const lim=AC.createDynamicsCompressor(); lim.threshold.value=-3; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=.002; lim.release.value=.12; lim.connect(AC.destination); AC.out=lim; }   // the same ceiling as the sea: no clipping
   padG=AC.createGain(); padG.gain.value=0; const rev=AC.createConvolver(); const L=AC.sampleRate*5, b=AC.createBuffer(2,L,AC.sampleRate);
   for(let c=0;c<2;c++){const d=b.getChannelData(c); for(let i=0;i<L;i++) d[i]=(R()*2-1)*Math.pow(1-i/L,2.2);} rev.buffer=b;
-  const wet=AC.createGain(); wet.gain.value=.7; padG.connect(AC.destination); padG.connect(rev); rev.connect(wet); wet.connect(AC.destination);
+  const wet=AC.createGain(); wet.gain.value=.7; padG.connect(AC.out); padG.connect(rev); rev.connect(wet); wet.connect(AC.out);
   [55,110,164.8,207.7,261.6].forEach((f,i)=>{ const o=AC.createOscillator(), g=AC.createGain(), lf=AC.createOscillator(), lg=AC.createGain();
     o.type=i<2?'triangle':'sine'; o.frequency.value=f; o.detune.value=(R()-.5)*10; g.gain.value=[.05,.045,.028,.02,.012][i];
     lf.frequency.value=.04+i*.027; lg.gain.value=g.gain.value*.7; lf.connect(lg); lg.connect(g.gain); lf.start(); o.connect(g); g.connect(padG); o.start(); });
@@ -804,11 +805,11 @@ function audio(){
   AC.rev=rev;
   for(const id of SIGNS) fetch(`audio/p_${id}.mp3`).then(r=>r.ok?r.arrayBuffer():null).then(ab=>ab&&AC.decodeAudioData(ab)).then(bf=>{ if(bf) PH[id]=bf; }).catch(()=>{});
 }
-function phrase(id){ if(!AC||!PH[id]) return; const s=AC.createBufferSource(), g=AC.createGain(); s.buffer=PH[id]; g.gain.value=.9; s.connect(g); g.connect(AC.destination); g.connect(AC.rev); s.start(nextGrid(.5)); }   // lands on the next 8th, in time with the blooms
+function phrase(id){ if(!AC||!PH[id]) return; const s=AC.createBufferSource(), g=AC.createGain(); s.buffer=PH[id]; g.gain.value=.9; s.connect(g); g.connect(AC.out); g.connect(AC.rev); s.start(nextGrid(.5)); }   // lands on the next 8th, in time with the blooms
 /* hovering a sign: its sound plays only while the pointer stays on it — it comes in on the beat, loops while you stay, and lets
    go softly the moment you leave */
 function voiceOn(s){ if(!AC||!PH[s.id]||s.voice) return; const src=AC.createBufferSource(), g=AC.createGain(), t=nextGrid(.5);
-  src.buffer=PH[s.id]; src.loop=true; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.9,t+.06); src.connect(g); g.connect(AC.destination); g.connect(AC.rev); src.start(t); s.voice={src,g}; }
+  src.buffer=PH[s.id]; src.loop=true; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.9,t+.06); src.connect(g); g.connect(AC.out); g.connect(AC.rev); src.start(t); s.voice={src,g}; }
 function voiceOff(s){ if(!s.voice) return; const {src,g}=s.voice, t=AC.currentTime; s.voice=null;
   g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.setTargetAtTime(0,t,.12); try{ src.stop(t+.8); }catch(e){} }
 let lastSnap=0;
@@ -818,7 +819,7 @@ function snapTick(){ if(!AC) return;                     // a fibre gives: a tin
   o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*.5,t+.09);
   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.03+R()*.02,t+.002); g.gain.exponentialRampToValueAtTime(.0001,t+.11);
   o.connect(g); let out=g; if(AC.createStereoPanner){ const p=AC.createStereoPanner(); p.pan.value=(R()*2-1)*.75; g.connect(p); out=p; }
-  out.connect(AC.destination); out.connect(AC.rev); o.start(t); o.stop(t+.13); }
+  out.connect(AC.out); out.connect(AC.rev); o.start(t); o.stop(t+.13); }
 let lastDrip=0;
 function drip(){ if(!onAC()) return;                               // a thread of the liquid gives: a soft, wet 'plip', somewhere left or right
   const t=Math.max(AC.currentTime+.005,lastDrip+.035); lastDrip=t;
@@ -826,48 +827,48 @@ function drip(){ if(!onAC()) return;                               // a thread o
   o.frequency.setValueAtTime(f,t); o.frequency.exponentialRampToValueAtTime(f*2.6,t+.07); lp.type='lowpass'; lp.frequency.value=1800;
   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.05+R()*.03,t+.006); g.gain.exponentialRampToValueAtTime(.0001,t+.22);
   o.connect(lp); lp.connect(g); let out=g; if(AC.createStereoPanner){ const pn=AC.createStereoPanner(); pn.pan.value=(R()*2-1)*.7; g.connect(pn); out=pn; }
-  out.connect(AC.destination); out.connect(AC.rev); o.start(t); o.stop(t+.25); }
+  out.connect(AC.out); out.connect(AC.rev); o.start(t); o.stop(t+.25); }
 function glass(pan,v=1){ if(!onAC()) return;                     // a glass marble breaks: a few high, bright partials and a short splinter (small ones: higher, softer)
   const t=AC.currentTime+.005, out=AC.createGain(); out.gain.value=.55*v; let o2=out;
-  if(AC.createStereoPanner){ const pn=AC.createStereoPanner(); pn.pan.value=pan*.8; out.connect(pn); o2=pn; } o2.connect(AC.destination); o2.connect(AC.rev);
+  if(AC.createStereoPanner){ const pn=AC.createStereoPanner(); pn.pan.value=pan*.8; out.connect(pn); o2=pn; } o2.connect(AC.out); o2.connect(AC.rev);
   [2637,3951,5274,6645,8372].forEach((f,i)=>{ const o=AC.createOscillator(), g=AC.createGain(); o.frequency.value=f*(v<1?1.5:1)*(1+(R()-.5)*.03);
     g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.05/(1+i*.4),t+.003); g.gain.exponentialRampToValueAtTime(.0001,t+.25+R()*.9); o.connect(g); g.connect(out); o.start(t); o.stop(t+1.3); });
   for(let k=0;k<4;k++){ const s=AC.createBufferSource(); s.buffer=noiseBuf(.04); const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=3000+R()*3000;
     const g=AC.createGain(), tk=t+k*(.012+R()*.03); g.gain.setValueAtTime(.16/(k+1),tk); g.gain.exponentialRampToValueAtTime(.0001,tk+.04); s.connect(hp); hp.connect(g); g.connect(out); s.start(tk); s.stop(tk+.05); } }
 function whoosh(){ if(!onAC()) return; const t=AC.currentTime;   // the halves let go: one low breath out
   const n=AC.createBufferSource(); n.buffer=noiseBuf(2); const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(260,t); f.frequency.exponentialRampToValueAtTime(1600,t+.25); f.frequency.exponentialRampToValueAtTime(160,t+1.8);
-  const g=AC.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.3,t+.18); g.gain.exponentialRampToValueAtTime(.0001,t+1.9); n.connect(f); f.connect(g); g.connect(AC.destination); g.connect(AC.rev); n.start(t); n.stop(t+2);
+  const g=AC.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.3,t+.18); g.gain.exponentialRampToValueAtTime(.0001,t+1.9); n.connect(f); f.connect(g); g.connect(AC.out); g.connect(AC.rev); n.start(t); n.stop(t+2);
   const o=AC.createOscillator(), og=AC.createGain(); o.frequency.setValueAtTime(72,t); o.frequency.exponentialRampToValueAtTime(34,t+1.6);
-  og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(.22,t+.06); og.gain.exponentialRampToValueAtTime(.0001,t+1.7); o.connect(og); og.connect(AC.destination); o.start(t); o.stop(t+1.8); }
+  og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(.22,t+.06); og.gain.exponentialRampToValueAtTime(.0001,t+1.7); o.connect(og); og.connect(AC.out); o.start(t); o.stop(t+1.8); }
 function boom(){ if(!onAC()) return; const t=AC.currentTime;   // the face lets go: one deep blow under water
   const o=AC.createOscillator(), g=AC.createGain(); o.frequency.setValueAtTime(58,t); o.frequency.exponentialRampToValueAtTime(28,t+2.2);
-  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.55,t+.03); g.gain.exponentialRampToValueAtTime(.0001,t+2.6); o.connect(g); g.connect(AC.destination); g.connect(AC.rev); o.start(t); o.stop(t+2.7);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.55,t+.03); g.gain.exponentialRampToValueAtTime(.0001,t+2.6); o.connect(g); g.connect(AC.out); g.connect(AC.rev); o.start(t); o.stop(t+2.7);
   const n=AC.createBufferSource(); n.buffer=noiseBuf(2); const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(900,t); f.frequency.exponentialRampToValueAtTime(120,t+1.4);
-  const ng=AC.createGain(); ng.gain.setValueAtTime(.22,t); ng.gain.exponentialRampToValueAtTime(.0001,t+1.6); n.connect(f); f.connect(ng); ng.connect(AC.destination); ng.connect(AC.rev); n.start(t); n.stop(t+1.7); }
+  const ng=AC.createGain(); ng.gain.setValueAtTime(.22,t); ng.gain.exponentialRampToValueAtTime(.0001,t+1.6); n.connect(f); f.connect(ng); ng.connect(AC.out); ng.connect(AC.rev); n.start(t); n.stop(t+1.7); }
 function deepSwell(){ if(!onAC()) return; const t=AC.currentTime;   // after the breath out: the water closes over, low and slow, and rises toward the dolphin
   const n=AC.createBufferSource(); n.buffer=noiseBuf(5); const f=AC.createBiquadFilter(); f.type='lowpass'; f.Q.value=3; f.frequency.setValueAtTime(140,t); f.frequency.exponentialRampToValueAtTime(520,t+3.2); f.frequency.exponentialRampToValueAtTime(220,t+4.8);
   const g=AC.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.16,t+1.4); g.gain.linearRampToValueAtTime(.1,t+3.4); g.gain.exponentialRampToValueAtTime(.0001,t+4.9);
-  n.connect(f); f.connect(g); g.connect(AC.destination); g.connect(AC.rev); n.start(t); n.stop(t+5);
+  n.connect(f); f.connect(g); g.connect(AC.out); g.connect(AC.rev); n.start(t); n.stop(t+5);
   const o=AC.createOscillator(), og=AC.createGain(); o.frequency.value=55; og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(.12,t+2.2); og.gain.exponentialRampToValueAtTime(.0001,t+5.5);
-  o.connect(og); og.connect(AC.destination); og.connect(AC.rev); o.start(t); o.stop(t+5.6); }
+  o.connect(og); og.connect(AC.out); og.connect(AC.rev); o.start(t); o.stop(t+5.6); }
 function firstEcho(){ if(!AC) return; const t=nextGrid(1); clickTrain(.5,3,t); at(t,()=>{ if(state!=='circle') return; ringEchoT=clock; pulses.push(clock); }); at(t+BEAT/2,whistle); }   // its first echo: the same call and circles as its answer later
 function firstCall(amp,when){ if(!AC) return; clickTrain(amp,1,when!=null?Math.max(AC.currentTime,when):nextGrid(.5)); }
 function bell(f,v,dur=4){ if(!AC) return; const t=AC.currentTime;
   [1,2.76,5.4].forEach((m,i)=>{ const o=AC.createOscillator(), g=AC.createGain(); o.frequency.value=f*m;
     g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v/(i+1),t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+dur/(i+1));
-    o.connect(g); g.connect(AC.destination); g.connect(AC.rev); o.start(t); o.stop(t+dur); }); }
+    o.connect(g); g.connect(AC.out); g.connect(AC.rev); o.start(t); o.stop(t+dur); }); }
 function noiseBuf(sec){ const L=AC.sampleRate*sec, b=AC.createBuffer(1,L,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<L;i++) d[i]=R()*2-1; return b; }
 function burst(){ if(!AC) return; const t=AC.currentTime;
   const n=AC.createBufferSource(); n.buffer=noiseBuf(4);
   const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=.7; f.frequency.setValueAtTime(260,t); f.frequency.exponentialRampToValueAtTime(4200,t+3);
   const g=AC.createGain(); g.gain.setValueAtTime(0,t); for(const [tt,v] of [[.3,.06],[.38,.01],[.9,.08],[.98,.015],[1.4,.1],[1.48,.02],[2.9,.2],[3.6,0]]) g.gain.linearRampToValueAtTime(v,t+tt);
-  n.connect(f); f.connect(g); g.connect(AC.destination); g.connect(AC.rev); n.start(t); n.stop(t+3.7);
+  n.connect(f); f.connect(g); g.connect(AC.out); g.connect(AC.rev); n.start(t); n.stop(t+3.7);
   [880,1108.7,1318.5,1760].forEach((fr,i)=>{ const o=AC.createOscillator(), og=AC.createGain(); o.frequency.value=fr;
     og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(.028,t+2.8+i*.05); og.gain.exponentialRampToValueAtTime(.0001,t+7);
     o.connect(og); og.connect(AC.rev); o.start(t); o.stop(t+7); }); }
 function clickTrain(amp,stage,when){ if(!AC) return; let t=(when==null?AC.currentTime:when)+.01; const t0=t, n=6+stage*2, gap=.032-stage*.003;
   const out=AC.createGain(); out.gain.value=amp; const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1800;
-  out.connect(hp); hp.connect(AC.destination); hp.connect(AC.rev);
+  out.connect(hp); hp.connect(AC.out); hp.connect(AC.rev);
   const nb=noiseBuf(.01);
   for(let i=0;i<n;i++){ const s=AC.createBufferSource(); s.buffer=nb; const g=AC.createGain(); const a=.25+.75*Math.sin(i/n*Math.PI);
     g.gain.setValueAtTime(a,t); g.gain.exponentialRampToValueAtTime(.001,t+.006); s.connect(g); g.connect(out); s.start(t); s.stop(t+.01);
@@ -875,21 +876,21 @@ function clickTrain(amp,stage,when){ if(!AC) return; let t=(when==null?AC.curren
     t+=gap*(.8+R()*.4); }
   const lo=AC.createOscillator(), lg=AC.createGain(); lo.frequency.setValueAtTime(90-stage*6,t0); lo.frequency.exponentialRampToValueAtTime(40,t0+.5);
   lg.gain.setValueAtTime(0,t0); lg.gain.linearRampToValueAtTime(.12+stage*.05,t0+.02); lg.gain.exponentialRampToValueAtTime(.0001,t0+.7);
-  lo.connect(lg); lg.connect(AC.destination); lo.start(t0); lo.stop(t0+.75); }
+  lo.connect(lg); lg.connect(AC.out); lo.start(t0); lo.stop(t0+.75); }
 function whistle(){ if(!AC) return; const t=AC.currentTime, o=AC.createOscillator(), g=AC.createGain(), v=AC.createOscillator(), vg=AC.createGain();
   o.type='sine'; o.frequency.setValueAtTime(1900,t); o.frequency.exponentialRampToValueAtTime(3600,t+.35); o.frequency.exponentialRampToValueAtTime(2500,t+.8); o.frequency.exponentialRampToValueAtTime(3100,t+1.2);
   v.frequency.value=11; vg.gain.value=60; v.connect(vg); vg.connect(o.frequency);
   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.07,t+.05); g.gain.setValueAtTime(.07,t+1.0); g.gain.exponentialRampToValueAtTime(.0001,t+1.5);
-  o.connect(g); g.connect(AC.destination); g.connect(AC.rev); o.start(t); v.start(t); o.stop(t+1.6); v.stop(t+1.6); }
+  o.connect(g); g.connect(AC.out); g.connect(AC.rev); o.start(t); v.start(t); o.stop(t+1.6); v.stop(t+1.6); }
 function ping(f,v){ if(!AC) return; const t=AC.currentTime, o=AC.createOscillator(), g=AC.createGain(); o.frequency.value=f;
-  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.008); g.gain.exponentialRampToValueAtTime(.0001,t+1.2); o.connect(g); g.connect(AC.destination); g.connect(AC.rev); o.start(t); o.stop(t+1.3); }
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.008); g.gain.exponentialRampToValueAtTime(.0001,t+1.2); o.connect(g); g.connect(AC.out); g.connect(AC.rev); o.start(t); o.stop(t+1.3); }
 function passBy(){ if(!AC) return; const t=AC.currentTime;     // the dolphin swims past you
   const n=AC.createBufferSource(); n.buffer=noiseBuf(4); const f=AC.createBiquadFilter(); f.type='lowpass';
   f.frequency.setValueAtTime(200,t); f.frequency.exponentialRampToValueAtTime(2400,t+1.9); f.frequency.exponentialRampToValueAtTime(180,t+3.6);
   const g=AC.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.32,t+1.9); g.gain.linearRampToValueAtTime(0,t+3.8);
-  n.connect(f); f.connect(g); g.connect(AC.destination); n.start(t); n.stop(t+4);
+  n.connect(f); f.connect(g); g.connect(AC.out); n.start(t); n.stop(t+4);
   const o=AC.createOscillator(), og=AC.createGain(); o.frequency.setValueAtTime(48,t); o.frequency.exponentialRampToValueAtTime(30,t+4);
-  og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(.35,t+1.8); og.gain.linearRampToValueAtTime(0,t+4.2); o.connect(og); og.connect(AC.destination); o.start(t); o.stop(t+4.3);
+  og.gain.setValueAtTime(0,t); og.gain.linearRampToValueAtTime(.35,t+1.8); og.gain.linearRampToValueAtTime(0,t+4.2); o.connect(og); og.connect(AC.out); o.start(t); o.stop(t+4.3);
   [1318,1046,880,659].forEach((fr,i)=>{ const b=AC.createOscillator(), bg=AC.createGain(), s=t+.4+i*.3; b.frequency.setValueAtTime(fr,s); b.frequency.exponentialRampToValueAtTime(fr*1.5,s+1.4);
     bg.gain.setValueAtTime(0,s); bg.gain.linearRampToValueAtTime(.035,s+.04); bg.gain.exponentialRampToValueAtTime(.0001,s+1.8); b.connect(bg); bg.connect(AC.rev); b.start(s); b.stop(s+1.9); }); }
 let voiceEl=null;
@@ -985,10 +986,10 @@ function keyDrop(kind){ if(!AC) return; if(AC.state==='suspended') AC.resume();
   const t=AC.currentTime+.005, base=kind==='enter'?240:kind==='del'?560:900, f=base*(.9+R()*.2), dur=kind==='enter'?.7:.22, vol=kind==='enter'?.09:kind==='del'?.035:.05;
   const o=AC.createOscillator(), g=AC.createGain(); o.type='sine'; o.frequency.setValueAtTime(f*1.7,t); o.frequency.exponentialRampToValueAtTime(f*.55,t+dur*.45);
   g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(vol,t+.005); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
-  o.connect(g); g.connect(AC.destination); if(AC.rev) g.connect(AC.rev); o.start(t); o.stop(t+dur+.05);
+  o.connect(g); g.connect(AC.out); if(AC.rev) g.connect(AC.rev); o.start(t); o.stop(t+dur+.05);
   if(!dripBuf){ const L=AC.sampleRate*.06|0; dripBuf=AC.createBuffer(1,L,AC.sampleRate); const dd=dripBuf.getChannelData(0); for(let i=0;i<L;i++) dd[i]=(R()*2-1)*Math.pow(1-i/L,3); }
   const n=AC.createBufferSource(), bp=AC.createBiquadFilter(), ng=AC.createGain(); n.buffer=dripBuf; bp.type='bandpass'; bp.frequency.value=3200+R()*1500; bp.Q.value=1.4;
-  ng.gain.value=kind==='enter'?.02:.012; n.connect(bp); bp.connect(ng); ng.connect(AC.destination); if(AC.rev) ng.connect(AC.rev); n.start(t); }
+  ng.gain.value=kind==='enter'?.02:.012; n.connect(bp); bp.connect(ng); ng.connect(AC.out); if(AC.rev) ng.connect(AC.rev); n.start(t); }
 nameIn.addEventListener('input',e=>{ const del=e.inputType&&e.inputType.startsWith('delete'); keyDrop(del?'del':'key'); if(!del) nameDrop(false); });
 function nameWater(dt){ if(state!=='name'&&!(state==='named'&&st<2)) { if(wnK>0){ wnK=0; wnDisp.setAttribute('scale','0'); } return; }
   wnT+=dt; wnK+=(0-wnK)*Math.min(1,dt*1.6);   // settles to still water once the name has risen

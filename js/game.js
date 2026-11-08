@@ -679,11 +679,12 @@ let decoding=null;
 function audioInit(){
   if (A.ctx){ if(A.ctx.state==='suspended') A.ctx.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
-  const C = new AC(); A.ctx = C;
+  const C = new AC({latencyHint:window.SB_AUDIO_HINT||'balanced'}); A.ctx = C;   // a little more buffer: no crackle when the picture is heavy
   const master=C.createGain(); master.gain.value=0.95;
   const comp=C.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=10; comp.ratio.value=4; comp.attack.value=0.01; comp.release.value=0.3;
-  master.connect(comp); comp.connect(C.destination);
-  const an=C.createAnalyser(); an.fftSize=512; an.smoothingTimeConstant=0.8; comp.connect(an);
+  const lim=C.createDynamicsCompressor(); lim.threshold.value=-3; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.002; lim.release.value=0.12;   // a ceiling: nothing reaches 0 dB and clips
+  master.connect(comp); comp.connect(lim); lim.connect(C.destination); C.out=lim;
+  const an=C.createAnalyser(); an.fftSize=512; an.smoothingTimeConstant=0.8; lim.connect(an);
   A.an=an; A.fft=new Uint8Array(an.frequencyBinCount);
   const conv=C.createConvolver(); conv.buffer=makeIR(C,4.2,2.4); const rv=C.createGain(); rv.gain.value=0.5; conv.connect(rv); rv.connect(master);
   const dly=C.createDelay(2); dly.delayTime.value=BEAT*0.75; const fb=C.createGain(); fb.gain.value=0.38;
