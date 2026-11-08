@@ -7,6 +7,23 @@ window.SB_DPR=(()=>{ const q=new URLSearchParams(location.search).get('q'), budg
   let n=0, t0=performance.now(), low=0; const f=t=>{ n++; const el=t-t0; if(el>2000){ const fps=n*1000/el; n=0; t0=t;
     if(document.visibilityState==='visible'&&fps<30&&window.SB_DPR>.6){ if(++low>=2){ low=0; window.SB_DPR=Math.max(.55,window.SB_DPR*.85); dispatchEvent(new Event('resize')); } } else low=0; }
   requestAnimationFrame(f); }; requestAnimationFrame(f); })();
+window.SBCursor=(()=>{ let el=null, ring=null, x=-1e4, y=-1e4, hot=0, want=0, shown=true; const t0=performance.now();
+  function make(){ if(el) return; const st=document.createElement('style');
+    st.textContent='html,body,body *{cursor:none!important}'
+      +'#sbcur{position:fixed;left:0;top:0;z-index:2147483000;pointer-events:none;will-change:transform}'
+      +'#sbcur i{position:absolute;left:0;top:0;border-radius:50%;transform:translate(-50%,-50%)}'
+      +'#sbcur .d{width:.5vh;height:.5vh;min-width:4px;min-height:4px;background:rgba(238,240,250,.85);box-shadow:0 0 6px rgba(200,208,250,.6)}'
+      +'#sbcur .r{border:max(1px,.145vh) solid rgba(200,208,250,.6)}';
+    document.head.appendChild(st); el=document.createElement('div'); el.id='sbcur'; el.innerHTML='<i class="r"></i><i class="d"></i>'; document.body.appendChild(el); ring=el.firstChild; requestAnimationFrame(tick); }
+  function tick(now){ hot+=(want-hot)*.2;
+    const ph=((now-t0)/750)%1, pu=Math.exp(-ph*5), h=innerHeight/900;   // the beat: 80 BPM, as the wake's
+    const d=2*(12+hot*8+pu*4)*h; ring.style.width=ring.style.height=d+'px'; ring.style.opacity=((.3+.45*pu)*(.6+.4*hot)/.75).toFixed(3);
+    el.style.display=shown&&!document.pointerLockElement?'block':'none'; el.style.transform=`translate(${x}px,${y}px)`;
+    requestAnimationFrame(tick); }
+  addEventListener('mousemove',e=>{ x=e.clientX; y=e.clientY; },{passive:true});
+  if(document.body) make(); else addEventListener('DOMContentLoaded',make);
+  return { hot(v){ want=Math.max(0,Math.min(1,v)); }, show(v){ shown=!!v; } };
+})();
 window.SBG=(()=>{
   const TAU=Math.PI*2, REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const C_CORE='rgba(248,249,255,', C_SIL='rgba(232,234,250,', C_PERI='rgba(111,127,208,', C_LIL='rgba(201,200,232,';

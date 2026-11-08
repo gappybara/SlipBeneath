@@ -1067,11 +1067,12 @@ addEventListener('keydown',e=>{
 });
 /* the cursor: a small sonar ring that beats on the bar's pulse and opens over what can be touched; progress as a row of dots */
 function drawCursor(){
-  if(!['dreaming','human','calling','light','wake','circle'].includes(state)||mouse[0]<-1e3) return;
+  if(!['dreaming','human','calling','light','wake','circle'].includes(state)||mouse[0]<-1e3){ if(window.SBCursor&&state!=='idle') SBCursor.hot(0); return; }
   const u=fx.height/900, [x,y]=mouse, B=BEAT, ph=(((beatNow()-beat0)%B)+B)%B/B, pu=Math.exp(-ph*5);
   let hot=0; if(state==='calling'){ const s=fx.height/VIEWH; hot=Math.hypot((x-fx.width/2)/(2.2*s),(y-fx.height/2)/(2.9*s))<1?1:0; }
   else if(state==='circle') hot=hovered?1:dolHover;
   curHot+=(hot-curHot)*.2;
+  if(window.SBCursor){ SBCursor.hot(curHot); return; }   // the one cursor of the piece (shared.js) shows it
   fg.save(); fg.globalCompositeOperation='lighter';
   fg.fillStyle='rgba(238,240,250,.85)'; fg.beginPath(); fg.arc(x,y,2.2*u,0,TAU); fg.fill();
   fg.strokeStyle=`rgba(200,208,250,${(.3+.45*pu)*(.6+.4*curHot)})`; fg.lineWidth=1.3*u;

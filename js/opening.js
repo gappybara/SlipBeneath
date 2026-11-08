@@ -488,7 +488,7 @@ function frame(now){
     const t=clock*(REDUCED?.4:1);
     let vort=0, re=RH*1.38, rh=RH, flash=0, black=0, m=0;
     const hv=mode==='surface'&&Math.hypot(mx-CX,my-CY)<RH*1.7?1:0; hover+=(hv-hover)*Math.min(1,dt*4);
-    cv.style.cursor=hv?'pointer':'default';
+    cv.style.cursor=hv?'pointer':'default'; if(window.SBCursor) SBCursor.hot(Math.max(hv,...orbs.map(o=>o.hv||0)));
     if(mode==='surface'){ re*=1+hover*.12;
       for(const o of orbs){ const on=Math.hypot(mx-o.x,my-o.y)<o.px*1.15; o.hv+=((on?1:0)-o.hv)*Math.min(1,dt*5); if(on) hoverSound(o); } }
     if(sw){ sw.t+=dt; const T=sw.t;
