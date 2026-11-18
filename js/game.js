@@ -1746,9 +1746,11 @@ function tick(dt){
     camera.lookAt(tmp.copy(me.pos).addScaledVector(fwd,4));
   } else { camera.position.copy(me.pos); camera.lookAt(tmp.copy(me.pos).add(fwd)); }
   if(document.pointerLockElement===stageEl&&state!=='play'&&state!=='archive'&&state!=='sleep') document.exitPointerLock();
+  { const e=Math.min(1,dt*10), ax=lookQ.x*e, ay=lookQ.y*e; lookQ.x-=ax; lookQ.y-=ay;   // the rolled look, eased in
+    if(auto===0&&(state==='play'||state==='archive')){ me.yaw+=ax; if(finaleT<0&&state==='play') J.yaw+=ax; me.pitch=Math.max(-1.3,Math.min(1.3,me.pitch-ay)); } else lookQ.x=lookQ.y=0; }
   if(!touchy&&document.pointerLockElement!==stageEl&&(state==='play'||state==='archive')&&auto===0&&!ptr.down&&hov.x>=0){   // the cursor free: at the screen's edge you keep turning that way
     const ex=hov.x/innerWidth, ey=hov.y/innerHeight, sx=ex<.06?-(1-ex/.06):ex>.94?(ex-.94)/.06:0, sy=ey<.06?-(1-ey/.06):ey>.94?(ey-.94)/.06:0;
-    if(sx){ me.yaw+=sx*1.4*dt; if(finaleT<0&&state==='play') J.yaw+=sx*1.4*dt; } if(sy) me.pitch=Math.max(-1.3,Math.min(1.3,me.pitch-sy*.9*dt)); }
+    const ek=Math.min(1,LOOK*1.4); if(sx){ me.yaw+=sx*1.4*ek*dt; if(finaleT<0&&state==='play') J.yaw+=sx*1.4*ek*dt; } if(sy) me.pitch=Math.max(-1.3,Math.min(1.3,me.pitch-sy*.9*ek*dt)); }
   setListener(me.pos,fwd); updateSpatial(); songTick();
 
   const nSet=heard();
@@ -1824,13 +1826,15 @@ stageEl.addEventListener('pointerdown',ev=>{
   try{ stageEl.setPointerCapture(ev.pointerId); }catch(e){}
   if(!touchy&&(state==='play'||state==='archive')&&document.pointerLockElement!==stageEl&&stageEl.requestPointerLock){ try{ const r=stageEl.requestPointerLock(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }   // from the first click the cursor is held: moving the mouse (rolling the ball) turns you
 });
+const QS=new URLSearchParams(location.search), LOOK=+(QS.get('look')||.45), GLIDE=+(QS.get('glide')||.45);   // trackball tuning on site: ?look=…&glide=… (1 = the old speeds)
+const lookQ={x:0,y:0};   // rolled but not yet turned: eased in over a few frames, so a flick of the ball doesn't whip the view
 const hov={x:-1,y:-1};   // where the free cursor is (when the cursor could not be held)
 document.addEventListener('mousemove',ev=>{
   hov.x=ev.clientX; hov.y=ev.clientY;
   const locked=document.pointerLockElement===stageEl;
   if((!locked&&(touchy||ptr.down))||!live()||(state!=='play'&&state!=='archive')||auto!==0) return; lastInput=clock;   // held or not, moving the mouse (rolling the ball) turns you; a drag still works as before
   const k=.0026, dx=Math.max(-120,Math.min(120,ev.movementX)), dy=Math.max(-120,Math.min(120,ev.movementY));   // (a stray jump is clipped)
-  me.yaw+=dx*k; if(finaleT<0&&state==='play') J.yaw+=dx*k; me.pitch=Math.max(-1.3,Math.min(1.3,me.pitch-dy*k)); tut.move+=Math.abs(dx)*.0008; moveHintDone=true;
+  lookQ.x+=dx*k*LOOK; lookQ.y+=dy*k*LOOK; tut.move+=Math.abs(dx)*.0008; moveHintDone=true;
 });
 stageEl.addEventListener('pointermove',ev=>{
   if(!live()) return; lastInput=clock;
@@ -1847,7 +1851,7 @@ function up(ev){
 }
 stageEl.addEventListener('pointerup',up); stageEl.addEventListener('pointercancel',()=>{ptr.down=false;stageEl.classList.remove('dragging');});
 stageEl.addEventListener('contextmenu',ev=>ev.preventDefault());
-stageEl.addEventListener('wheel',ev=>{ if(!live()) return; ev.preventDefault(); if((state==='play'||state==='archive')&&auto===0){ forwardVec(fwd); me.vel.addScaledVector(fwd,-ev.deltaY*0.02); tut.move+=Math.min(.5,Math.abs(ev.deltaY)*.004); } },{passive:false});   // with the camera the wheel is the way to swim: a longer glide
+stageEl.addEventListener('wheel',ev=>{ if(!live()) return; ev.preventDefault(); if((state==='play'||state==='archive')&&auto===0){ forwardVec(fwd); me.vel.addScaledVector(fwd,-Math.max(-100,Math.min(100,ev.deltaY))*0.02*GLIDE); if(me.vel.length()>9) me.vel.setLength(9); tut.move+=Math.min(.5,Math.abs(ev.deltaY)*.004); } },{passive:false});   // with the camera the wheel is the way to swim: a longer glide
 /* Shift+S, anywhere but the name field: save THE DEEP to a file (a backup during the exhibition, and the archive afterwards) */
 function exportDeep(){
   let list=entries; if(!list.length){ try{ list=JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]'); }catch(e){ list=[]; } }
