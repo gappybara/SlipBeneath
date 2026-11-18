@@ -953,9 +953,12 @@ const TB=on=>`<svg viewBox="0 0 64 44" style="height:clamp(24px,2.3vw,38px)">${T
 /* the same trackball inside a hold ring (the long press that puts you to sleep) */
 const TBH=on=>`<svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" class="track"/><circle cx="40" cy="40" r="36" class="hold" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 40 40)"/><g transform="translate(14,25) scale(.81)">${TBP(on)}</g></svg>`;
 const TUT={
-  swim:{svg:TB('ring'), en:'turn the ring to swim  ·  roll to look'},
+  look:{svg:TB('ball'), en:'roll the ball · look around', kr:'공을 굴려 주위를 둘러보세요'},
+  swim:{svg:TB('ring'), en:'turn the ring · swim forward', kr:'링을 돌려 앞으로 헤엄치세요'},
+  ok:{svg:'<svg viewBox="0 0 80 80" style="height:clamp(24px,2.3vw,38px)"><circle cx="40" cy="40" r="26"/><path d="M28 41L37 50L54 31" class="on" style="stroke-width:2"/></svg>', en:'good', kr:'좋아요'},
+  found:{svg:'<svg viewBox="0 0 122 22" style="height:clamp(12px,1.1vw,20px)"><circle cx="15" cy="11" r="6" class="on"/><circle cx="46" cy="11" r="6"/><circle cx="77" cy="11" r="6"/><circle cx="108" cy="11" r="6"/></svg>', en:'one found · three more · echo again', kr:'하나를 찾았습니다 · 세 개 더 · 다시 에코를 보내세요'},
   echo:{svg:TB('btn'), en:'send an echo'},
-  goal:{svg:`<svg viewBox="0 0 122 22" style="height:clamp(12px,1.1vw,20px)"><circle cx="15" cy="11" r="6"/><circle cx="46" cy="11" r="6"/><circle cx="77" cy="11" r="6"/><circle cx="108" cy="11" r="6"/></svg>`, en:'find four sounds in the dark'},
+  goal:{svg:`<svg viewBox="0 0 122 22" style="height:clamp(12px,1.1vw,20px)"><circle cx="15" cy="11" r="6"/><circle cx="46" cy="11" r="6"/><circle cx="77" cy="11" r="6"/><circle cx="108" cy="11" r="6"/></svg>`, en:'find four hidden sounds · swim toward the loudest answer', kr:'숨은 소리 네 개를 찾으세요 · 가장 크게 대답하는 쪽으로 헤엄치세요'},
   deep:{html:`<div class="pair">${TB('btn')}<div class="t"><span class="en">echo<br>find the others</span><span class="kr">에코로 다른 존재 찾기</span></div></div>`
     +`<div class="pair listen"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" class="track"/><circle cx="40" cy="40" r="36" class="hold ehold" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 40 40)"/><rect x="22" y="23" width="36" height="34" rx="6"/><text x="40" y="46" text-anchor="middle">E</text></svg><div class="t"><span class="en">near a being<br>hold E</span><span class="kr">존재 가까이에서 E를 길게 눌러 듣기</span></div></div>`
     +`<div class="pair">${TBH('btn')}<div class="t"><span class="en">hold<br>to sleep</span><span class="kr">길게 눌러 잠들기</span></div></div>`},
@@ -968,7 +971,7 @@ if(window.SBCam&&SBCam.on){
   const HAND=`<svg viewBox="0 0 80 80" style="height:clamp(24px,2.3vw,38px)"><rect x="26" y="30" width="28" height="30" rx="8"/><path d="M30 30V16M38 30V12M46 30V14M54 34V20"/></svg>`;
   if(SBCam.S.full) TUT.swim={svg:FACE.replace('<path d="M33 52Q40 58 47 52" class="on"/>','<path d="M20 40H8M60 40H72" class="on"/>'), en:'turn your head · you swim that way; lean in to go faster', kr:'고개를 돌리면 그쪽으로 헤엄칩니다 · 몸을 기울이면 빨라집니다'};
   TUT.echo={svg:FACE.replace('<path d="M33 52Q40 58 47 52" class="on"/>','<ellipse cx="40" cy="54" rx="6" ry="5" class="on"/>'), en:'open your mouth · send an echo', kr:'입을 벌려 에코를 보내세요'};
-  if(!SBCam.S.full) TUT.swim={svg:TB('ring'), en:'turn the ring to swim  ·  roll to look', kr:'링을 돌려 헤엄치기 · 공을 굴려 둘러보기'};   // with the camera: the mouse alone moves you
+  if(!SBCam.S.full) TUT.swim={svg:TB('ring'), en:'turn the ring · swim forward', kr:'링을 돌려 앞으로 헤엄치세요'};   // with the camera: the mouse alone moves you
   TUT.take={svg:HAND, en:'make a fist or press space · take the sound', kr:'주먹을 쥐거나 스페이스를 눌러 소리를 가져오세요'};
   TUT.listen={svg:`<svg viewBox="0 0 80 80" style="height:clamp(24px,2.3vw,38px)"><circle cx="40" cy="40" r="5" class="on"/><path d="M26 26A20 20 0 0 0 26 54M54 26A20 20 0 0 1 54 54M16 16A34 34 0 0 0 16 64M64 16A34 34 0 0 1 64 64"/></svg>`,
     en:'listen · each sound answers your echo from where it hides', kr:'귀 기울이세요 · 소리는 숨은 곳에서 에코에 대답합니다'};
@@ -1013,14 +1016,16 @@ function camTick(dt){
 const LISTEN_V=0.12;   // how near a being must be to listen to it (E, palm, tap): about 15, where it already stands large before you
 let camPalmDone=false, camHandWarned=false;
 const ECHO_HINT=window.SBCam&&SBCam.on?'open your mouth · send an echo':'click · send an echo';
-let tut={step:0,shown:'',move:0,goalT:0};
+let tut={step:0,shown:'',move:0,goalT:0,look:0,glide:0,okUntil:0};
+const TUTN={look:'1 / 5',swim:'2 / 5',echo:'3 / 5',goal:'4 / 5',take:'5 / 5'};
 function tutShow(k){
   if(tut.shown===k) return; tut.shown=k; tutEl.classList.add('gone'); stageEl.classList.toggle('tutOn',!!k); if(!k) return;
   setTimeout(()=>{ if(tut.shown!==k) return; const c=TUT[k];
-    tutEl.innerHTML=c.html||(c.svg+`<div class="t"><span class="en">${c.en}</span><span class="kr">${c.kr||krOf(c.en)}</span></div>`);
+    const n=tut.step<4&&TUTN[k]?`<span class="n">${TUTN[k]}</span>`:'';
+    tutEl.innerHTML=c.html||(c.svg+`<div class="t">${n}<span class="en">${c.en}</span><span class="kr">${c.kr||krOf(c.en)}</span></div>`);
     tutEl.classList.remove('gone'); },500);
 }
-function tutReset(){ tut={step:touchy?4:0,shown:'',move:0,goalT:0}; tutEl.classList.add('gone'); }
+function tutReset(){ tut={step:touchy?4:0,shown:'',move:0,goalT:0,look:0,glide:0,okUntil:0}; tutEl.classList.add('gone'); }
 let eyeHintUntil=0;
 function setHint(text){
   if(hintShown===text) return;
@@ -1587,7 +1592,7 @@ function swim(dt,bounds){
     if(keys.has('a')||keys.has('arrowleft')) acc.sub(right);
     if(keys.has('e')&&state==='play') acc.y+=1; if(keys.has('q')) acc.y-=1;
   }
-  if(acc.lengthSq()>0){ acc.normalize().multiplyScalar(13); me.vel.addScaledVector(acc,dt); moveHintDone=true; tut.move+=dt; }
+  if(acc.lengthSq()>0){ acc.normalize().multiplyScalar(13); me.vel.addScaledVector(acc,dt); moveHintDone=true; tut.move+=dt; tut.glide+=dt*150; }
   if(auto===0&&(state==='play'||state==='archive')&&window.SBCam&&SBCam.on){ const k=SBCam.swim(), sd=SBCam.side(); if(k>0){ me.vel.addScaledVector(fwd,k*6*dt); me.vel.addScaledVector(right,sd*4*dt); tut.move+=dt*Math.min(1,k); } else if(k<0) me.vel.addScaledVector(fwd,-SBCam.back()*5*dt); }   // with the camera: swim where you look, lean in to speed up
   me.vel.multiplyScalar(Math.pow(0.2,dt)); me.pos.addScaledVector(me.vel,dt);
   me.pos.x=Math.max(-bounds,Math.min(bounds,me.pos.x)); me.pos.y=Math.max(-20,Math.min(TOP,me.pos.y)); me.pos.z=Math.max(-bounds-30,Math.min(bounds,me.pos.z));
@@ -1641,15 +1646,17 @@ function tick(dt){
       } else if(o.state==='bead'){ const lv=reefMat.uniforms.uLeave.value; o.pos.copy(slotPos(o.id)).sub(S).multiplyScalar(1-0.85*lv).add(S); o.glow=(0.5+0.25*Math.sin(t*1.3+i)+bass*0.4)*(1-lv); }
       else o.glow=Math.max(0,o.glow-dt);
     }
-    if(tut.step<4 && (finaleT>=0 || heard()>0)){ tut.step=4; tutShow(''); }   // once a sound is taken (or the being forms) the tutorial is over
-    if(finaleT<0 && tut.step<4){                                    // the tutorial runs first; the old hints wait
-      if(CAMG&&canTake&&firstEchoT>0) tutShow('take');   // (cam.html) a sound within reach: how to take it comes first, whatever card was up
-      else if(tut.step===0){ if(t-playT>1.5) tutShow('swim'); if(tut.move>1.4||(CAMG&&t-playT>8)) tut.step=1; }   // scrolling counts as moving; with the camera the echo card follows anyway
-      else if(tut.step===1){ tutShow('echo'); if(firstEchoT>0){ tut.step=2; tut.goalT=t; } }
-      else if(tut.step===2){ tutShow(CAMG&&t-tut.goalT>4.5?'listen':'goal'); if(t-tut.goalT>(CAMG?10:4.5)){ tut.step=3; tutShow(''); } }
-      else { tutShow(canTake?'take':''); if(heard()>0){ tut.step=4; tutShow(''); } }
+    if(tut.step<4 && (finaleT>=0 || heard()>0)){ tut.step=4; if(finaleT<0){ tut.okUntil=t+5; tutShow('found'); } else tutShow(''); }   // the tutorial ends with the first find, counted
+    if(tut.step>=4 && tut.shown==='found' && t>tut.okUntil) tutShow('');   // once a sound is taken (or the being forms) the tutorial is over
+    if(finaleT<0 && tut.step<4){                                    // the tutorial: one thing at a time, each waits until you have done it
+      const full=CAMG&&SBCam.S.full;
+      if(tut.okUntil>t) tutShow('ok');   // a short "good" between the steps
+      else if(tut.step===0){ if(full) tut.step=1; else if(t-playT>1.5){ tutShow('look'); if(tut.look>500){ tut.step=1; tut.okUntil=t+1.7; } } }
+      else if(tut.step===1){ tutShow('swim'); if(tut.glide>500||(full&&tut.move>1.4)){ tut.step=2; tut.okUntil=t+1.7; } }
+      else if(tut.step===2){ tutShow('echo'); if(firstEchoT>0){ tut.step=3; tut.okUntil=t+1.7; tut.goalT=t; } }
+      else tutShow(canTake?'take':'goal');
     }
-    if((touchy||(window.SBCam&&SBCam.on)) && firstEchoT<0 && t-playT>4) setHint(ECHO_HINT);
+    if(touchy && firstEchoT<0 && t-playT>4) setHint(ECHO_HINT);   // (elsewhere the tutorial's cards say it)
     if(tut.step>=4 && finaleT<0 && !canTake && !hintShown && t-lastEchoAt>6 && t-nudgeAt>22){ nudgeAt=t; setHint(ECHO_HINT); }   // gentle, and rare
     if(hintShown==='click · send an echo' && tut.step>=4 && t-nudgeAt>8) setHint('');
     if(firstEchoT>0 && finaleT<0 && tut.step>=3){
@@ -1834,14 +1841,14 @@ document.addEventListener('mousemove',ev=>{
   const locked=document.pointerLockElement===stageEl;
   if((!locked&&(touchy||ptr.down))||!live()||(state!=='play'&&state!=='archive')||auto!==0) return; lastInput=clock;   // held or not, moving the mouse (rolling the ball) turns you; a drag still works as before
   const k=.0026, dx=Math.max(-120,Math.min(120,ev.movementX)), dy=Math.max(-120,Math.min(120,ev.movementY));   // (a stray jump is clipped)
-  lookQ.x+=dx*k*LOOK; lookQ.y+=dy*k*LOOK; tut.move+=Math.abs(dx)*.0008; moveHintDone=true;
+  lookQ.x+=dx*k*LOOK; lookQ.y+=dy*k*LOOK; tut.look+=Math.abs(dx)+Math.abs(dy); tut.move+=Math.abs(dx)*.0008; moveHintDone=true;
 });
 stageEl.addEventListener('pointermove',ev=>{
   if(!live()) return; lastInput=clock;
   if(!ptr.down || (state!=='play'&&state!=='archive')) return;
   const dx=ev.clientX-ptr.x, dy=ev.clientY-ptr.y; ptr.x=ev.clientX; ptr.y=ev.clientY;
   if(!ptr.drag && Math.hypot(ev.clientX-ptr.sx,ev.clientY-ptr.sy)>7){ ptr.drag=true; stageEl.classList.add('dragging'); }
-  if(ptr.drag && auto===0){ const k=touchy?0.006:0.0035; me.yaw+=dx*k; if(finaleT<0&&state==='play') J.yaw+=dx*k; me.pitch=Math.max(-1.3,Math.min(1.3,me.pitch-dy*k)); if(touchy) moveHintDone=true; }
+  if(ptr.drag && auto===0){ const k=touchy?0.006:0.0035; me.yaw+=dx*k; if(finaleT<0&&state==='play') J.yaw+=dx*k; me.pitch=Math.max(-1.3,Math.min(1.3,me.pitch-dy*k)); tut.look+=Math.abs(dx)+Math.abs(dy); if(touchy) moveHintDone=true; }
 });
 function up(ev){
   if(!ptr.down) return; ptr.down=false; stageEl.classList.remove('dragging');
@@ -1851,7 +1858,7 @@ function up(ev){
 }
 stageEl.addEventListener('pointerup',up); stageEl.addEventListener('pointercancel',()=>{ptr.down=false;stageEl.classList.remove('dragging');});
 stageEl.addEventListener('contextmenu',ev=>ev.preventDefault());
-stageEl.addEventListener('wheel',ev=>{ if(!live()) return; ev.preventDefault(); if((state==='play'||state==='archive')&&auto===0){ forwardVec(fwd); me.vel.addScaledVector(fwd,-Math.max(-100,Math.min(100,ev.deltaY))*0.02*GLIDE); if(me.vel.length()>9) me.vel.setLength(9); tut.move+=Math.min(.5,Math.abs(ev.deltaY)*.004); } },{passive:false});   // with the camera the wheel is the way to swim: a longer glide
+stageEl.addEventListener('wheel',ev=>{ if(!live()) return; ev.preventDefault(); if((state==='play'||state==='archive')&&auto===0){ forwardVec(fwd); me.vel.addScaledVector(fwd,-Math.max(-100,Math.min(100,ev.deltaY))*0.02*GLIDE); if(me.vel.length()>9) me.vel.setLength(9); tut.glide+=Math.min(100,Math.abs(ev.deltaY)); tut.move+=Math.min(.5,Math.abs(ev.deltaY)*.004); } },{passive:false});   // with the camera the wheel is the way to swim: a longer glide
 /* Shift+S, anywhere but the name field: save THE DEEP to a file (a backup during the exhibition, and the archive afterwards) */
 function exportDeep(){
   let list=entries; if(!list.length){ try{ list=JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]'); }catch(e){ list=[]; } }

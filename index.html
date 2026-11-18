@@ -74,6 +74,8 @@ body{margin:0;background:var(--void);color:var(--ink);overflow:hidden;display:fl
 @keyframes tutRing{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
 #tut .t{display:flex;flex-direction:column;gap:.55em}
 #tut .en{font-size:var(--sub-en);letter-spacing:.32em;text-transform:uppercase;color:var(--ink)}
+#tut .n{font-size:calc(var(--sub-en)*.72);letter-spacing:.3em;color:rgba(190,198,248,.55)}
+#tut:not(:has(.pair)){top:50%;bottom:auto;transform:translate(-50%,-50%);padding:1.6em 2.6em;border-radius:3em;background:radial-gradient(ellipse at center,rgba(4,5,11,.78) 0%,rgba(4,5,11,.55) 55%,rgba(4,5,11,0) 100%)}
 #named{justify-content:flex-end;padding-bottom:8%}
 #named .nm{margin:0;font-family:var(--title);font-size:clamp(16px,1.7vw,28px);letter-spacing:.55em;padding-left:.55em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 18px rgba(150,165,240,.6)}
 #part .eyeOpen[hidden]{display:none}   /* #stage canvas{display:block} would otherwise keep it on screen */
