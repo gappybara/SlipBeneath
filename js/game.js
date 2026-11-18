@@ -1017,13 +1017,13 @@ const LISTEN_V=0.12;   // how near a being must be to listen to it (E, palm, tap
 let camPalmDone=false, camHandWarned=false;
 const ECHO_HINT=window.SBCam&&SBCam.on?'open your mouth · send an echo':'click · send an echo';
 let tut={step:0,shown:'',move:0,goalT:0,look:0,glide:0,okUntil:0};
-const TUTN={look:'1 / 5',swim:'2 / 5',echo:'3 / 5',goal:'4 / 5',take:'5 / 5'};
+const TUTN={look:'1 / 3',swim:'2 / 3',echo:'3 / 3'};
 function tutShow(k){
   if(tut.shown===k) return; tut.shown=k; tutEl.classList.add('gone'); stageEl.classList.toggle('tutOn',!!k); if(!k) return;
   setTimeout(()=>{ if(tut.shown!==k) return; const c=TUT[k];
     const n=tut.step<4&&TUTN[k]?`<span class="n">${TUTN[k]}</span>`:'';
     tutEl.innerHTML=c.html||(c.svg+`<div class="t">${n}<span class="en">${c.en}</span><span class="kr">${c.kr||krOf(c.en)}</span></div>`);
-    tutEl.classList.remove('gone'); },500);
+    tutEl.classList.toggle('mid',['look','swim','echo','ok'].includes(k)); tutEl.classList.remove('gone'); },500);
 }
 function tutReset(){ tut={step:touchy?4:0,shown:'',move:0,goalT:0,look:0,glide:0,okUntil:0}; tutEl.classList.add('gone'); }
 let eyeHintUntil=0;
@@ -1653,8 +1653,8 @@ function tick(dt){
       if(tut.okUntil>t) tutShow('ok');   // a short "good" between the steps
       else if(tut.step===0){ if(full) tut.step=1; else if(t-playT>1.5){ tutShow('look'); if(tut.look>500){ tut.step=1; tut.okUntil=t+1.7; } } }
       else if(tut.step===1){ tutShow('swim'); if(tut.glide>500||(full&&tut.move>1.4)){ tut.step=2; tut.okUntil=t+1.7; } }
-      else if(tut.step===2){ tutShow('echo'); if(firstEchoT>0){ tut.step=3; tut.okUntil=t+1.7; tut.goalT=t; } }
-      else tutShow(canTake?'take':'goal');
+      else if(tut.step===2){ tutShow('echo'); if(firstEchoT>0){ tut.step=3; tut.okUntil=t+1.7; tut.goalT=t+1.7; } }
+      else tutShow(canTake?'take':(t-tut.goalT<9?'goal':''));   // at the foot: the goal for a while, then how to take a sound when one is near
     }
     if(touchy && firstEchoT<0 && t-playT>4) setHint(ECHO_HINT);   // (elsewhere the tutorial's cards say it)
     if(tut.step>=4 && finaleT<0 && !canTake && !hintShown && t-lastEchoAt>6 && t-nudgeAt>22){ nudgeAt=t; setHint(ECHO_HINT); }   // gentle, and rare

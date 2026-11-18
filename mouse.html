@@ -75,7 +75,10 @@ body{margin:0;background:var(--void);color:var(--ink);overflow:hidden;display:fl
 #tut .t{display:flex;flex-direction:column;gap:.55em}
 #tut .en{font-size:var(--sub-en);letter-spacing:.32em;text-transform:uppercase;color:var(--ink)}
 #tut .n{font-size:calc(var(--sub-en)*.72);letter-spacing:.3em;color:rgba(190,198,248,.55)}
-#tut:not(:has(.pair)){top:50%;bottom:auto;transform:translate(-50%,-50%);padding:1.6em 2.6em;border-radius:3em;background:radial-gradient(ellipse at center,rgba(4,5,11,.78) 0%,rgba(4,5,11,.55) 55%,rgba(4,5,11,0) 100%)}
+#tut.mid{top:50%;bottom:auto;transform:translate(-50%,-50%);padding:1.6em 2.6em;border-radius:3em;background:radial-gradient(ellipse at center,rgba(4,5,11,.78) 0%,rgba(4,5,11,.55) 55%,rgba(4,5,11,0) 100%)}
+#hint span{color:rgba(238,240,250,.9)} #hint .kr,#tut .kr{color:rgba(238,240,250,.8)}
+#hint span,#tut .en,#tut .kr{text-shadow:0 0 6px rgba(4,5,11,.95),0 0 16px rgba(4,5,11,.8)}
+#tut svg{stroke:rgba(214,220,252,1)}
 #named{justify-content:flex-end;padding-bottom:8%}
 #named .nm{margin:0;font-family:var(--title);font-size:clamp(16px,1.7vw,28px);letter-spacing:.55em;padding-left:.55em;text-transform:uppercase;color:var(--ink);text-shadow:0 0 18px rgba(150,165,240,.6)}
 #part .eyeOpen[hidden]{display:none}   /* #stage canvas{display:block} would otherwise keep it on screen */
@@ -235,6 +238,9 @@ body.titlebottom #nameWrap{bottom:9%}
   #wake #wname small{display:flex;flex-direction:column;align-items:center;gap:.5em}
   #wake #wname small .en{font-family:var(--sans);font-weight:300;font-size:var(--sub-en);letter-spacing:.22em;padding-left:.22em;color:rgba(238,240,250,.45);text-transform:uppercase}
   #wake #wname small .kr{font-family:var(--ko);font-weight:200;font-size:var(--sub-ko);letter-spacing:.12em;color:rgba(238,240,250,.4)}
+  #wake #help{color:rgba(238,240,250,.82)} #wake #wtb .en{color:rgba(238,240,250,.96)} #wake #wtb .kr{color:rgba(238,240,250,.8)} #wake #wtb svg{stroke:rgba(238,240,250,.62)}
+  #wake #wname label{color:rgba(238,240,250,.88)} #wake #wname small .en{color:rgba(238,240,250,.74)} #wake #wname small .kr{color:rgba(238,240,250,.7)}
+  #wake #help,#wake #wtb .en,#wake #wtb .kr,#wake #wname small{text-shadow:0 0 6px rgba(4,5,11,.95),0 0 16px rgba(4,5,11,.8)}   /* brighter tips, readable over the grains */
   #wake #wname:not(.gone)>*{animation:waterIn 1.6s cubic-bezier(.2,.7,.2,1) both} #wake #wname:not(.gone)>*:nth-child(2){animation-delay:.2s} #wake #wname:not(.gone)>*:nth-child(3){animation-delay:.45s}
   /* the name, under water: the letters seen through moving water (an SVG displacement), a pool of light that breathes behind them,
      and each keystroke a drop — the letters shiver and a soft ring of light spreads out under the line */
